@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Dashboard = () => {
-  const [profile, setProfile] = useState({});
   const [history, setHistory] = useState({ visitCount: 0, appointments: [], nextServiceDate: null });
   const [name, setName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -15,7 +14,6 @@ const Dashboard = () => {
 
       try {
         const profileRes = await axios.get('http://localhost:5000/api/users/profile', { headers: { Authorization: `Bearer ${token}` } });
-        setProfile(profileRes.data);
         setName(profileRes.data.name);
         setMobileNumber(profileRes.data.mobileNumber);
         setImage(profileRes.data.image);
@@ -34,7 +32,6 @@ const Dashboard = () => {
     const token = localStorage.getItem('token');
     try {
       const res = await axios.put('http://localhost:5000/api/users/profile', { name, mobileNumber, image }, { headers: { Authorization: `Bearer ${token}` } });
-      setProfile(res.data);
       alert('Profile updated');
     } catch (err) {
       alert('Update failed');
