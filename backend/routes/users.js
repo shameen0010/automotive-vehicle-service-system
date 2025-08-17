@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require('../middleware/auth.');
 const User = require('../models/User.');
-const Appointment = require('../models/Appointment');
+const Appointment = require('../models/Appointment.');
 
 // Get user profile
 router.get('/profile', auth, async (req, res) => {
@@ -38,7 +38,7 @@ router.get('/history', auth, async (req, res) => {
     let nextServiceDate = null;
     if (visitCount > 0) {
       const lastDate = new Date(appointments[0].date);
-      lastDate.setMonth(lastDate.getMonth() + 6); // Assume 6 months interval
+      lastDate.setMonth(lastDate.getMonth() + 6);
       nextServiceDate = lastDate.toISOString().split('T')[0];
     }
     res.json({ visitCount, appointments, nextServiceDate });
