@@ -1,9 +1,7 @@
-
 {
-  "name": "auto-elite-frontend",
+  "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:5000",
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^14.0.0",
@@ -12,7 +10,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.2",
-    "react-scripts": "^5.0.1",
     "web-vitals": "^3.1.1"
   },
   "devDependencies": {
@@ -43,5 +40,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "description": "",
+  "main": "tailwind.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }
