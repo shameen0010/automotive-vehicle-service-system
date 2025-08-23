@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #000000; /* Black theme */
+  color: #FFFFFF;
+}
+
+/* Unique styles: Modern, sleek automotive feel with shadows, rounded cards */
+.card {
+  @apply bg-elite-dark-gray p-6 rounded-lg shadow-lg border border-elite-gray;
+}
+
+.button {
+  @apply bg-elite-accent text-elite-white py-2 px-4 rounded hover:bg-blue-700;
+}
+
+.input {
+  @apply bg-elite-gray text-elite-black p-2 rounded border border-elite-dark-gray;
+}
