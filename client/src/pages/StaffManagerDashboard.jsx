@@ -350,10 +350,3 @@ export default function StaffManagerDashboard() {
   );
 }
 
-
-
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
