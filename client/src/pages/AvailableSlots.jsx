@@ -132,7 +132,7 @@ export default function AvailableSlots(){
           {availableSlots.map((slot, index) => (
             <div
               key={index}
-              className="relative p-4 rounded-2xl border border-white/10 bg-glass shadow-lg backdrop-blur-md transition-all duration-200 cursor-pointer group hover:scale-[1.03] hover:shadow-2xl hover:border-primary/60 hover:ring-2 hover:ring-primary/30"
+              className={`relative p-4 rounded-2xl border border-white/10 bg-glass shadow-lg backdrop-blur-md transition-all duration-200 cursor-pointer group hover:scale-[1.03] hover:shadow-2xl hover:border-primary/60 hover:ring-2 hover:ring-primary/30`}
               onClick={() => handleSlotClick(slot)}
             >
               <div className="text-center">
@@ -140,7 +140,7 @@ export default function AvailableSlots(){
                 <h3 className="font-semibold text-lg mb-2 text-primary drop-shadow">{slot.timeSlot}</h3>
                 {/* Status Badge (other statuses) */}
                 {!(slot.isAvailable) && (
-                  <span className="px-4 py-2 rounded-full text-xs font-medium transition-colors duration-200 bg-orange-100 text-orange-800 group-hover:ring-2 group-hover:ring-accent2/60 whitespace-nowrap"> 
+                  <span className={`px-4 py-2 rounded-full text-xs font-medium transition-colors duration-200 bg-orange-100 text-orange-800 group-hover:ring-2 group-hover:ring-accent2/60 whitespace-nowrap`}> 
                     {getStatusText(slot.isAvailable, slot.advisorsAvailable, slot.queueLength)}
                   </span>
                 )}
@@ -169,7 +169,7 @@ export default function AvailableSlots(){
                 {(slot.isAvailable && slot.advisorsAvailable <= 5) && (
                   <div className="flex justify-center mt-4">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-300 text-yellow-900 font-semibold shadow-sm text-sm whitespace-nowrap">
-                      ⚠ Limited availability ({slot.advisorsAvailable} left)
+                      ⚠️ Limited availability ({slot.advisorsAvailable} left)
                     </span>
                   </div>
                 )}

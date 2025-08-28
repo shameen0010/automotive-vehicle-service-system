@@ -762,7 +762,10 @@ const generateBookingReport = async (req, res) => {
 
 // Generate PDF report with AUTO ELITE branding
 const generatePDFReport = async (req, res) => {
-  const logoPath = path.join(__dirname, '..', 'assets', 'WhatsApp Image 2025-08-23 at 08.36.41_4ac10a51.jpg');
+  console.log('🔍 generatePDFReport function called with params:', req.params);
+  console.log('🔍 User ID:', req.user?.id);
+  console.log('🔍 User role:', req.user?.role);
+  
   try {
     // Handle both route patterns: /:id/report and /report/:id
     const bookingId = req.params.id || req.params.bookingId;
@@ -831,8 +834,8 @@ const generatePDFReport = async (req, res) => {
     doc.pipe(res);
 
     // --- PDF BEAUTIFICATION START ---
-
     // Set up logo path - use correct path to assets directory
+    const logoPath = path.join(__dirname, '..', 'assets', 'WhatsApp Image 2025-08-23 at 08.36.41_4ac10a51.jpg');
 
     // Professional header layout with logo and company branding
     try {
@@ -881,37 +884,10 @@ const generatePDFReport = async (req, res) => {
     // Report Info - Pure black headers, dark gray content
     doc.font('Times-Bold').fontSize(12).fillColor('#000000').text('Report Information', { align: 'center' });
     doc.font('Times-Roman').fontSize(10).fillColor('#000000');
-    // Set up logo path
-    // const logoPath = path.join(__dirname, '..', 'assets', 'WhatsApp Image 2025-08-23 at 08.36.41_4ac10a51.jpg');
-
-    // Draw logo at top right
-    try {
-      doc.image(logoPath, 420, 40, { width: 120, align: 'right' });
-    } catch (e) {
-      console.warn('Logo image not found or failed to load:', e.message);
-    }
-
-    // Title and branding
-    doc.font('Times-Bold').fontSize(26).fillColor('#1f2937').text('AUTO ELITE', 50, 50, { align: 'left' });
-    doc.font('Times-Roman').fontSize(14).fillColor('#6b7280').text('Premium Automotive Service Center', 50, 80, { align: 'left' });
-
-    // Decorative line
-    doc.moveTo(50, 110).lineTo(545, 110).lineWidth(2).strokeColor('#3b82f6').stroke();
-
-    // Main Report Title
-    doc.moveDown(1.5);
-    doc.font('Times-Bold').fontSize(20).fillColor('#1f2937').text('BOOKING REPORT', { align: 'center' });
-    doc.moveDown(0.5);
-
-    // Report Info
-    doc.font('Times-Bold').fontSize(12).fillColor('#374151').text('Report Information', { align: 'center' });
-    doc.font('Times-Roman').fontSize(10).fillColor('#6b7280');
-
     doc.text(`Report Generated: ${new Date().toLocaleString()}`, { align: 'center' });
     doc.text(`Booking ID: ${bookingId}`, { align: 'center' });
     doc.text(`Report Type: PDF Report`, { align: 'center' });
     doc.moveDown(1);
-
 
     // Section: Customer Information - Pure black headers, pure black content for readability
     doc.font('Times-Bold').fontSize(13).fillColor('#000000').text('CUSTOMER INFORMATION', 50, doc.y);
@@ -984,70 +960,6 @@ const generatePDFReport = async (req, res) => {
     doc.moveDown(0.3);
     doc.text('Premium Service • Professional Care • Elite Experience', { align: 'center' });
     doc.moveDown(0.3);
-    // Section: Customer Information
-    doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('CUSTOMER INFORMATION', 50, doc.y);
-    doc.font('Times-Roman').fontSize(11).fillColor('#374151');
-    doc.text(`Name: ${booking.user.name}`, 60, doc.y + 5);
-    doc.text(`Email: ${booking.user.email}`, 60, doc.y);
-    doc.text(`Phone: ${booking.user.phone}`, 60, doc.y);
-    doc.moveDown(0.5);
-
-    // Section: Service Details
-    doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('SERVICE DETAILS', 50, doc.y + 10);
-    doc.font('Times-Roman').fontSize(11).fillColor('#374151');
-    doc.text(`Service Type: ${booking.serviceType}`, 60, doc.y + 5);
-    doc.text(`Date: ${booking.date}`, 60, doc.y);
-    doc.text(`Time Slot: ${booking.timeSlot}`, 60, doc.y);
-    doc.text(`Status: ${booking.status}`, 60, doc.y);
-    doc.text(`Estimated Duration: ${booking.estimatedDuration} minutes`, 60, doc.y);
-    doc.moveDown(0.5);
-
-    // Section: Vehicle Information
-    doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('VEHICLE INFORMATION', 50, doc.y + 10);
-    doc.font('Times-Roman').fontSize(11).fillColor('#374151');
-    doc.text(`Make: ${booking.vehicle.make}`, 60, doc.y + 5);
-    doc.text(`Model: ${booking.vehicle.model}`, 60, doc.y);
-    doc.text(`Year: ${booking.vehicle.year}`, 60, doc.y);
-    doc.text(`License Plate: ${booking.vehicle.plate}`, 60, doc.y);
-    doc.moveDown(0.5);
-
-    // Section: Advisor Information
-    doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('ADVISOR INFORMATION', 50, doc.y + 10);
-    doc.font('Times-Roman').fontSize(11).fillColor('#374151');
-    if (booking.advisor) {
-      doc.text(`Name: ${booking.advisor.name}`, 60, doc.y + 5);
-      doc.text(`Email: ${booking.advisor.email}`, 60, doc.y);
-      doc.text(`Phone: ${booking.advisor.phone}`, 60, doc.y);
-    } else {
-      doc.text('Not assigned yet', 60, doc.y + 5);
-    }
-    doc.moveDown(0.5);
-
-    // Section: Timeline
-    doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('TIMELINE', 50, doc.y + 10);
-    doc.font('Times-Roman').fontSize(11).fillColor('#374151');
-    doc.text(`Booked At: ${new Date(booking.createdAt).toLocaleString()}`, 60, doc.y + 5);
-    if (booking.canModifyUntil) doc.text(`Can Modify Until: ${new Date(booking.canModifyUntil).toLocaleString()}`, 60, doc.y);
-    if (booking.serviceStartTime) doc.text(`Service Start: ${new Date(booking.serviceStartTime).toLocaleString()}`, 60, doc.y);
-    if (booking.serviceEndTime) doc.text(`Service End: ${new Date(booking.serviceEndTime).toLocaleString()}`, 60, doc.y);
-    if (booking.queuePosition) doc.text(`Queue Position: #${booking.queuePosition}`, 60, doc.y);
-    if (booking.queueStartTime) doc.text(`Queue Start: ${new Date(booking.queueStartTime).toLocaleString()}`, 60, doc.y);
-    if (booking.estimatedServiceTime) doc.text(`Estimated Service: ${new Date(booking.estimatedServiceTime).toLocaleString()}`, 60, doc.y);
-    doc.moveDown(0.5);
-
-    // Section: Notes
-    if (booking.notes) {
-      doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('NOTES', 50, doc.y + 10);
-      doc.font('Times-Roman').fontSize(11).fillColor('#374151').text(booking.notes, 60, doc.y + 5);
-      doc.moveDown(0.5);
-    }
-
-    // Footer
-    doc.moveDown(2);
-    doc.moveTo(50, doc.y + 10).lineTo(545, doc.y + 10).lineWidth(1).strokeColor('#3b82f6').stroke();
-    doc.moveDown(0.5);
-    doc.font('Times-Roman').fontSize(10).fillColor('#6b7280').text('Thank you for choosing AUTO ELITE for your automotive service needs.', { align: 'center' });
-    doc.text('Premium Service • Professional Care • Elite Experience', { align: 'center' });
     doc.fontSize(8).text(`Generated on ${new Date().toLocaleString()}`, { align: 'center' });
     // --- PDF BEAUTIFICATION END ---
 
@@ -1069,7 +981,6 @@ const generatePDFReport = async (req, res) => {
       // If headers already sent, end the response properly
       res.end();
     }
-
   }
 };
 
