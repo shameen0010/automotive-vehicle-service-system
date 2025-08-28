@@ -137,23 +137,41 @@ export default function AvailableSlots(){
             >
               <div className="text-center">
                 {/* Time Slot */}
+<<<<<<< HEAD
                 <h3 className="font-semibold text-lg mb-2 text-primary drop-shadow">{slot.timeSlot}</h3>
                 {/* Status Badge (other statuses) */}
                 {!(slot.isAvailable) && (
                   <span className={`px-4 py-2 rounded-full text-xs font-medium transition-colors duration-200 bg-orange-100 text-orange-800 group-hover:ring-2 group-hover:ring-accent2/60 whitespace-nowrap`}> 
+=======
+                <h3 className="font-semibold text-lg mb-2 gradient-text drop-shadow">{slot.timeSlot}</h3>
+                {/* Status Badge (other statuses) */}
+                {!(slot.isAvailable) && (
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 ${getStatusColor(slot.isAvailable, slot.advisorsAvailable, slot.queueLength)} group-hover:ring-2 group-hover:ring-accent2/60`}> 
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                     {getStatusText(slot.isAvailable, slot.advisorsAvailable, slot.queueLength)}
                   </span>
                 )}
                 {/* Advisors Info */}
+<<<<<<< HEAD
                 <div className="mt-2 text-sm text-slate-200">
                   <p><strong>Advisors:</strong> {slot.advisorsAvailable}/{slot.totalAdvisors}</p>
                   {slot.advisorsAssigned > 0 && (
                     <p className="text-xs mt-1 text-slate-300">
+=======
+                <div className="mt-2 text-sm text-muted">
+                  <p><strong>Advisors:</strong> {slot.advisorsAvailable}/{slot.totalAdvisors}</p>
+                  {slot.advisorsAssigned > 0 && (
+                    <p className="text-xs mt-1">
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                       {slot.advisorsAssigned} advisor{slot.advisorsAssigned > 1 ? 's' : ''} assigned
                     </p>
                   )}
                   {slot.queueLength > 0 && (
+<<<<<<< HEAD
                     <p className="text-xs mt-1 text-orange-500">
+=======
+                    <p className="text-xs mt-1 text-orange-600">
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                       {slot.queueLength} in queue
                     </p>
                   )}
@@ -174,7 +192,11 @@ export default function AvailableSlots(){
                   </div>
                 )}
                 {!slot.isAvailable && slot.queueLength > 0 && (
+<<<<<<< HEAD
                   <div className="mt-2 text-sm text-green-400">
+=======
+                  <div className="mt-2 text-sm text-accent">
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                     <p>📋 Join queue</p>
                   </div>
                 )}
@@ -212,6 +234,7 @@ export default function AvailableSlots(){
               </div>
             ) : (
               <div className="space-y-4">
+<<<<<<< HEAD
                 {/* Queue Information */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-surface/50 rounded border border-white/10">
@@ -229,11 +252,30 @@ export default function AvailableSlots(){
                   <div className="text-center p-3 bg-surface/50 rounded border border-white/10">
                     <p className="text-sm text-muted">Next Available</p>
                     <p className="text-lg font-semibold text-accent">{queueInfo.nextAvailableTime}</p>
+=======
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <span className="font-medium">Queue Length:</span>
+                    <span className="ml-2 text-orange-600">{queueInfo.queueLength} people</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Advisors Available:</span>
+                    <span className="ml-2">{queueInfo.advisorsAvailable}/{queueInfo.totalAdvisors}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Estimated Wait:</span>
+                    <span className="ml-2 text-orange-600">{queueInfo.estimatedWaitTime} minutes</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Next Available:</span>
+                    <span className="ml-2 text-orange-600">{queueInfo.nextAvailableTime}</span>
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                   </div>
                 </div>
                 
                 {queueInfo.queuedBookings.length > 0 && (
                   <div>
+<<<<<<< HEAD
                     <h4 className="font-medium mb-2 text-slate-100">Current Queue:</h4>
                     <div className="space-y-2">
                       {queueInfo.queuedBookings.map((booking, index) => (
@@ -244,6 +286,18 @@ export default function AvailableSlots(){
                               <p className="text-sm text-muted">{booking.serviceType} - {booking.vehicle.make} {booking.vehicle.model}</p>
                             </div>
                             <div className="text-right text-sm text-accent">
+=======
+                    <h4 className="font-medium mb-2">Current Queue:</h4>
+                    <div className="space-y-2">
+                      {queueInfo.queuedBookings.map((booking, index) => (
+                        <div key={booking.id} className="p-3 bg-orange-50 rounded border border-orange-200">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">#{booking.queuePosition} - {booking.userName}</p>
+                              <p className="text-sm text-gray-600">{booking.serviceType} - {booking.vehicle.make} {booking.vehicle.model}</p>
+                            </div>
+                            <div className="text-right text-sm text-orange-600">
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                               <p>Est: {new Date(booking.estimatedServiceTime).toLocaleString()}</p>
                             </div>
                           </div>
@@ -253,8 +307,13 @@ export default function AvailableSlots(){
                   </div>
                 )}
                 
+<<<<<<< HEAD
                 <div className="p-4 bg-surface/30 rounded-lg border border-white/20">
                   <p className="text-sm text-slate-200">
+=======
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                     <strong>How it works:</strong> When you join the queue, you'll be automatically assigned 
                     an advisor as soon as one becomes available. The system processes the queue in order, 
                     so earlier bookings get priority.
@@ -267,7 +326,11 @@ export default function AvailableSlots(){
                       setSelectedSlot(null);
                       setQueueInfo(null);
                     }}
+<<<<<<< HEAD
                     className="px-4 py-2 text-muted border border-white/20 rounded hover:bg-surface/50 hover:text-slate-200 transition-colors"
+=======
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                   >
                     Close
                   </button>
@@ -278,7 +341,11 @@ export default function AvailableSlots(){
                       // Navigate to booking page with pre-filled time slot
                       window.location.href = `/book-appointment?date=${selectedDate}&timeSlot=${selectedSlot.timeSlot}`;
                     }}
+<<<<<<< HEAD
                     className="px-4 py-2 bg-accent text-bg rounded hover:bg-accent/90 transition-colors"
+=======
+                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+>>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                   >
                     Join Queue
                   </button>
