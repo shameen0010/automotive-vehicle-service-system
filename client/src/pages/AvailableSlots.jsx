@@ -34,7 +34,7 @@ export default function AvailableSlots(){
     
     setLoadingSlots(true);
     try {
-      const { data } = await api.get(/bookings/available-slots?date=${selectedDate});
+      const { data } = await api.get(`/bookings/available-slots?date=${selectedDate}`);
       setAvailableSlots(data.availableSlots);
     } catch (error) {
       console.error('Failed to load available slots:', error);
@@ -49,7 +49,7 @@ export default function AvailableSlots(){
     
     setLoadingQueue(true);
     try {
-      const { data } = await api.get(/bookings/queue-info?date=${selectedDate}&timeSlot=${timeSlot});
+      const { data } = await api.get(`/bookings/queue-info?date=${selectedDate}&timeSlot=${timeSlot}`);
       setQueueInfo(data);
     } catch (error) {
       console.error('Failed to load queue info:', error);
@@ -74,10 +74,10 @@ export default function AvailableSlots(){
   };
 
   const getStatusText = (isAvailable, advisorsAvailable, queueLength) => {
-    if (!isAvailable && queueLength > 0) return Queue Available (${queueLength} people);
+    if (!isAvailable && queueLength > 0) return `Queue Available (${queueLength} people)`;
     if (!isAvailable) return 'All Advisors Busy';
-    if (advisorsAvailable <= 5) return Limited Availability (${advisorsAvailable} left);
-    return Available (${advisorsAvailable} advisors);
+    if (advisorsAvailable <= 5) return `Limited Availability (${advisorsAvailable} left)`;
+    return `Available (${advisorsAvailable} advisors)`;
   };
 
   // Show loading while checking authentication
@@ -132,7 +132,7 @@ export default function AvailableSlots(){
           {availableSlots.map((slot, index) => (
             <div
               key={index}
-              className={relative p-4 rounded-2xl border border-white/10 bg-glass shadow-lg backdrop-blur-md transition-all duration-200 cursor-pointer group hover:scale-[1.03] hover:shadow-2xl hover:border-primary/60 hover:ring-2 hover:ring-primary/30}
+              className="relative p-4 rounded-2xl border border-white/10 bg-glass shadow-lg backdrop-blur-md transition-all duration-200 cursor-pointer group hover:scale-[1.03] hover:shadow-2xl hover:border-primary/60 hover:ring-2 hover:ring-primary/30"
               onClick={() => handleSlotClick(slot)}
             >
               <div className="text-center">
@@ -140,7 +140,7 @@ export default function AvailableSlots(){
                 <h3 className="font-semibold text-lg mb-2 text-primary drop-shadow">{slot.timeSlot}</h3>
                 {/* Status Badge (other statuses) */}
                 {!(slot.isAvailable) && (
-                  <span className={px-4 py-2 rounded-full text-xs font-medium transition-colors duration-200 bg-orange-100 text-orange-800 group-hover:ring-2 group-hover:ring-accent2/60 whitespace-nowrap}> 
+                  <span className="px-4 py-2 rounded-full text-xs font-medium transition-colors duration-200 bg-orange-100 text-orange-800 group-hover:ring-2 group-hover:ring-accent2/60 whitespace-nowrap"> 
                     {getStatusText(slot.isAvailable, slot.advisorsAvailable, slot.queueLength)}
                   </span>
                 )}
@@ -276,7 +276,7 @@ export default function AvailableSlots(){
                       setSelectedSlot(null);
                       setQueueInfo(null);
                       // Navigate to booking page with pre-filled time slot
-                      window.location.href = /book-appointment?date=${selectedDate}&timeSlot=${selectedSlot.timeSlot};
+                      window.location.href = `/book-appointment?date=${selectedDate}&timeSlot=${selectedSlot.timeSlot}`;
                     }}
                     className="px-4 py-2 bg-accent text-bg rounded hover:bg-accent/90 transition-colors"
                   >

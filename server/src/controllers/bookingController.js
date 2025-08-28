@@ -762,10 +762,7 @@ const generateBookingReport = async (req, res) => {
 
 // Generate PDF report with AUTO ELITE branding
 const generatePDFReport = async (req, res) => {
-  console.log('🔍 generatePDFReport function called with params:', req.params);
-  console.log('🔍 User ID:', req.user?.id);
-  console.log('🔍 User role:', req.user?.role);
-  
+  const logoPath = path.join(__dirname, '..', 'assets', 'WhatsApp Image 2025-08-23 at 08.36.41_4ac10a51.jpg');
   try {
     // Handle both route patterns: /:id/report and /report/:id
     const bookingId = req.params.id || req.params.bookingId;
@@ -834,9 +831,8 @@ const generatePDFReport = async (req, res) => {
     doc.pipe(res);
 
     // --- PDF BEAUTIFICATION START ---
-<<<<<<< HEAD
+
     // Set up logo path - use correct path to assets directory
-    const logoPath = path.join(__dirname, '..', 'assets', 'WhatsApp Image 2025-08-23 at 08.36.41_4ac10a51.jpg');
 
     // Professional header layout with logo and company branding
     try {
@@ -885,9 +881,8 @@ const generatePDFReport = async (req, res) => {
     // Report Info - Pure black headers, dark gray content
     doc.font('Times-Bold').fontSize(12).fillColor('#000000').text('Report Information', { align: 'center' });
     doc.font('Times-Roman').fontSize(10).fillColor('#000000');
-=======
     // Set up logo path
-    const logoPath = path.join(__dirname, 'assets', 'auto-elite-logo.png');
+    // const logoPath = path.join(__dirname, '..', 'assets', 'WhatsApp Image 2025-08-23 at 08.36.41_4ac10a51.jpg');
 
     // Draw logo at top right
     try {
@@ -911,13 +906,13 @@ const generatePDFReport = async (req, res) => {
     // Report Info
     doc.font('Times-Bold').fontSize(12).fillColor('#374151').text('Report Information', { align: 'center' });
     doc.font('Times-Roman').fontSize(10).fillColor('#6b7280');
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
+
     doc.text(`Report Generated: ${new Date().toLocaleString()}`, { align: 'center' });
     doc.text(`Booking ID: ${bookingId}`, { align: 'center' });
     doc.text(`Report Type: PDF Report`, { align: 'center' });
     doc.moveDown(1);
 
-<<<<<<< HEAD
+
     // Section: Customer Information - Pure black headers, pure black content for readability
     doc.font('Times-Bold').fontSize(13).fillColor('#000000').text('CUSTOMER INFORMATION', 50, doc.y);
     doc.font('Times-Roman').fontSize(10).fillColor('#000000');
@@ -989,7 +984,6 @@ const generatePDFReport = async (req, res) => {
     doc.moveDown(0.3);
     doc.text('Premium Service • Professional Care • Elite Experience', { align: 'center' });
     doc.moveDown(0.3);
-=======
     // Section: Customer Information
     doc.font('Times-Bold').fontSize(14).fillColor('#1f2937').text('CUSTOMER INFORMATION', 50, doc.y);
     doc.font('Times-Roman').fontSize(11).fillColor('#374151');
@@ -1054,7 +1048,6 @@ const generatePDFReport = async (req, res) => {
     doc.moveDown(0.5);
     doc.font('Times-Roman').fontSize(10).fillColor('#6b7280').text('Thank you for choosing AUTO ELITE for your automotive service needs.', { align: 'center' });
     doc.text('Premium Service • Professional Care • Elite Experience', { align: 'center' });
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
     doc.fontSize(8).text(`Generated on ${new Date().toLocaleString()}`, { align: 'center' });
     // --- PDF BEAUTIFICATION END ---
 
@@ -1064,7 +1057,6 @@ const generatePDFReport = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error in generatePDFReport:', error);
-<<<<<<< HEAD
     
     // Only send error response if headers haven't been sent yet
     if (!res.headersSent) {
@@ -1077,13 +1069,7 @@ const generatePDFReport = async (req, res) => {
       // If headers already sent, end the response properly
       res.end();
     }
-=======
-    res.status(500).json({ 
-      message: 'Failed to generate PDF report',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
+
   }
 };
 

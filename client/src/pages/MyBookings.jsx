@@ -237,54 +237,17 @@ End of Report
           <li key={b._id} className="py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-<<<<<<< HEAD
-                <h3 className="font-medium text-lg">{b.serviceType}</h3>
-=======
                 <p className="font-medium text-lg">{b.serviceType} • {b.date} • {b.timeSlot}</p>
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(b.status)}`}>
                   {b.status}
                 </span>
                 {b.status === 'Queued' && b.queuePosition && (
-<<<<<<< HEAD
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30">
-=======
                   <span className="px-2 py-1 rounded text-xs font-medium bg-purple-200 text-purple-800">
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                     Queue #{b.queuePosition}
                   </span>
                 )}
               </div>
-<<<<<<< HEAD
-              <p className="text-sm text-muted mb-1">
-                {b.date} • {b.timeSlot}
-              </p>
-              <p className="text-sm text-muted mb-1">
-                {b.vehicle?.make} {b.vehicle?.model} ({b.vehicle?.plate})
-              </p>
-              
-              {b.status === 'Queued' && (
-                <div className="mt-2 p-3 bg-surface/30 rounded-lg border border-white/20">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-slate-200">Queue Position:</span>
-                      <span className="ml-2 text-accent">#{b.queuePosition}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-200">Estimated Service:</span>
-                      <span className="ml-2 text-accent">{formatEstimatedTime(b.estimatedServiceTime)}</span>
-                    </div>
-                    {b.queueStartTime && (
-                      <div className="col-span-2">
-                        <span className="font-medium text-slate-200">Joined Queue:</span>
-                        <span className="ml-2 text-accent">{new Date(b.queueStartTime).toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted mt-2">
-=======
               <p className="text-sm text-muted mb-1">{b.vehicle?.make} {b.vehicle?.model} ({b.vehicle?.plate})</p>
-              
               {b.status === 'Queued' && (
                 <div className="mt-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -304,34 +267,21 @@ End of Report
                     )}
                   </div>
                   <p className="text-xs text-purple-600 mt-2">
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                     💡 You'll be automatically assigned an advisor when one becomes available. 
                     You can cancel anytime before the service starts.
                   </p>
                 </div>
               )}
-              
               {b.advisor && (
-<<<<<<< HEAD
-                <p className="text-sm text-primary">👨‍🔧 Advisor: {b.advisor.name}</p>
-              )}
-              {b.status !== 'Cancelled' && b.status !== 'Queued' && (
-                <p className="text-xs text-muted">
-=======
                 <p className="text-sm text-blue-600">👨‍🔧 Advisor: {b.advisor.name}</p>
               )}
               {b.status !== 'Cancelled' && b.status !== 'Queued' && (
                 <p className="text-xs text-gray-500">
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                   Can cancel until: {formatDeadline(b.canModifyUntil)}
                 </p>
               )}
               {b.status === 'Queued' && (
-<<<<<<< HEAD
-                <p className="text-xs text-muted">
-=======
                 <p className="text-xs text-purple-500">
->>>>>>> 383711344a2ca0083916cb5a126db79b0ef3e9d9
                   Can cancel anytime while in queue
                 </p>
               )}
