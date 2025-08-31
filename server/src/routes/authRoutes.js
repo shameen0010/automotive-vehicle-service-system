@@ -2,9 +2,11 @@ import { Router } from 'express';
 import { authLimiter } from '../middleware/rateLimit.js';
 import { login, register, me, logout, requestPasswordReset, resetPassword } from '../controllers/authController.js';
 import { authRequired } from '../middleware/auth.js';
+
 import { testSMTPConnection } from '../utils/email.js';
 import User from '../models/User.js';
 import crypto from 'crypto';
+
 // Multer setup for avatar upload
 import multer from 'multer';
 import path from 'path';
@@ -36,6 +38,7 @@ r.post('/login', authLimiter, login);
 r.get('/me', authRequired, me);
 r.post('/logout', authRequired, logout);
 r.post('/request-reset', requestPasswordReset);
+
 r.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -94,5 +97,8 @@ r.get('/test-smtp', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+r.post('/reset-password', resetPassword);
+
 
 export default r;
