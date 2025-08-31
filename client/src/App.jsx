@@ -4,6 +4,11 @@ import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+
+import ForgotPassword from "./pages/ForgotPassword";
+import VerifyOTP from "./pages/VerifyOTP";
+import ResetPassword from "./pages/ResetPassword";
+
 import BookAppointment from "./pages/BookAppointment";
 import MyBookings from "./pages/MyBookings";
 import ManageUsers from "./pages/ManageUsers";
@@ -31,6 +36,11 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify-otp" element={<VerifyOTP />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
             <Route path="/book" element={<RoleGuard roles={["user"]}><BookAppointment /></RoleGuard>} />
             <Route path="/bookings" element={<RoleGuard roles={["user"]}><MyBookings /></RoleGuard>} />
             <Route path="/available-slots" element={<RoleGuard roles={["user"]}><AvailableSlots /></RoleGuard>} />
