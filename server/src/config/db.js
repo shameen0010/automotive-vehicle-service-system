@@ -14,4 +14,10 @@ export const connectDB = async (uri) => {
     console.error('  - On Linux: sudo systemctl start mongod');
     process.exit(1);
   }
+
+export const connectDB = async (uri) => {
+  mongoose.set('strictQuery', true);
+  await mongoose.connect(uri);
+  console.log('MongoDB connected');
+
 };
