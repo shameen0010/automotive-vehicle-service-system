@@ -4,7 +4,7 @@ const bookingSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   advisor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   serviceType: { type: String, enum: ['General Service','Oil Change','Diagnostics','Body Work'], required: true },
-  vehicle: { make: String, model: String, year: Number, plate: String },
+  vehicle: { model: String, year: Number, plate: String },
   date: { type: String, required: true },     // YYYY-MM-DD
   timeSlot: { type: String, required: true }, // e.g. 10:00-11:00
   status: { type: String, enum: ['Pending','Confirmed','In Progress','Completed','Cancelled','Queued'], default: 'Pending' },

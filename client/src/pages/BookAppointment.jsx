@@ -20,12 +20,18 @@ function todayStr() {
   const d = new Date();
   return d.toISOString().slice(0, 10);
 }
+//fixed date two weeks from today
+function twoWeeksFromTodayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 14);
+  return d.toISOString().slice(0, 10);
+}
 
 export default function BookAppointment(){
   const nav = useNavigate();
   const [form,setForm] = useState({
     serviceType:'General Service',
-    vehicle:{ make:'', model:'', year:'', plate:'' },
+    vehicle:{ model:'', year:'', plate:'' },
     date:'', timeSlot:'', notes:''
   });
   const [err,setErr] = useState('');
@@ -36,6 +42,65 @@ export default function BookAppointment(){
   const [bookingSuccess, setBookingSuccess] = useState(null);
 
   const changeVehicle = (k,v)=>setForm({...form, vehicle:{...form.vehicle, [k]:v}});
+
+  // Format vehicle plate as user types
+  const formatPlate = (value) => {
+    // Remove all non-alphanumeric characters
+    const clean = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    // Handle different input scenarios
+    if (clean.length === 0) return '';
+
+    // For inputs that could be ABBXXXX (7 chars) -> ABB-XXXX
+    if (clean.length === 7 && /^[A-Z]{3}\d{4}$/.test(clean)) {
+      return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+    }
+
+    // For inputs that could be ABXXXX (6 chars) -> AB-XXXX
+    if (clean.length === 6 && /^[A-Z]{2}\d{4}$/.test(clean)) {
+      return `${clean.slice(0, 2)}-${clean.slice(2)}`;
+    }
+
+    // For inputs that could be 32XXXX (6 chars) -> 32-XXXX
+    if (clean.length === 6 && /^\d{2}\d{4}$/.test(clean)) {
+      return `${clean.slice(0, 2)}-${clean.slice(2)}`;
+    }
+
+    // For partial inputs, try to format progressively
+    if (clean.length >= 3) {
+      // If we have at least 3 characters and the first 2-3 are letters
+      if (/^[A-Z]{2,3}/.test(clean)) {
+        const letters = clean.match(/^[A-Z]{2,3}/)[0];
+        const numbers = clean.slice(letters.length);
+        if (numbers.length > 0) {
+          return `${letters}-${numbers}`;
+        }
+        return letters;
+      }
+      // If we have at least 2 characters and the first 2 are numbers
+      else if (/^\d{2}/.test(clean)) {
+        const numbers = clean.match(/^\d{2}/)[0];
+        const rest = clean.slice(2);
+        if (rest.length > 0) {
+          return `${numbers}-${rest}`;
+        }
+        return numbers;
+      }
+    }
+
+    // For very short inputs or unrecognized patterns, return as-is (limited to 7 chars)
+    return clean.slice(0, 7);
+  };
+
+  // Validate plate format
+  const isValidPlate = (plate) => {
+    const formats = [
+      /^[A-Z]{3}-\d{4}$/,  // ABB-XXXX
+      /^[A-Z]{2}-\d{4}$/,  // AB-XXXX
+      /^\d{2}-\d{4}$/      // 32-XXXX
+    ];
+    return formats.some(format => format.test(plate));
+  };
 
   // Fetch booked slots when date changes
   useEffect(() => {
@@ -71,11 +136,15 @@ export default function BookAppointment(){
     if (!form.serviceType) errors.push('Service type is required');
     if (!form.date) errors.push('Date is required');
     if (!form.timeSlot) errors.push('Time slot is required');
-    if (!form.vehicle.make?.trim()) errors.push('Vehicle make is required');
     if (!form.vehicle.model?.trim()) errors.push('Vehicle model is required');
     if (!form.vehicle.year) errors.push('Vehicle year is required');
     if (!form.vehicle.plate?.trim()) errors.push('Vehicle plate is required');
-    
+
+    // Validate plate format
+    if (form.vehicle.plate && !isValidPlate(form.vehicle.plate)) {
+      errors.push('Vehicle plate must be in format: ABB-XXXX, AB-XXXX, or 32-XXXX');
+    }
+
     // Validate year range
     const year = parseInt(form.vehicle.year);
     if (isNaN(year) || year < 1980 || year > 2100) {
@@ -85,6 +154,15 @@ export default function BookAppointment(){
     // Validate date format
     if (form.date && !/^\d{4}-\d{2}-\d{2}$/.test(form.date)) {
       errors.push('Invalid date format');
+    }
+
+    // Enforce date within next two weeks (including today)
+    if (form.date) {
+      const selected = new Date(form.date + 'T00:00:00');
+      const minDate = new Date(todayStr() + 'T00:00:00');
+      const maxDate = new Date(twoWeeksFromTodayStr() + 'T00:00:00');
+      if (selected < minDate) errors.push('Date cannot be in the past');
+      if (selected > maxDate) errors.push('Date must be within the next 14 days');
     }
     
     return errors;
@@ -107,7 +185,7 @@ export default function BookAppointment(){
       setBookingSuccess(data.booking);
       setForm({
         serviceType:'General Service',
-        vehicle:{ make:'', model:'', year:'', plate:'' },
+        vehicle:{ model:'', year:'', plate:'' },
         date:'', timeSlot:'', notes:''
       });
       setBookedSlots([]);
@@ -132,7 +210,7 @@ AUTOMOTIVE SERVICE MANAGEMENT SYSTEM
 BOOKING REPORT
 ====================================
 
-Booking ID: ${report.bookingId}
+
 Report Generated: ${new Date(report.reportGeneratedAt).toLocaleString()}
 
 CUSTOMER INFORMATION:
@@ -151,7 +229,6 @@ Estimated Duration: ${report.service.estimatedDuration} minutes
 
 VEHICLE INFORMATION:
 --------------------
-Make: ${report.vehicle.make}
 Model: ${report.vehicle.model}
 Year: ${report.vehicle.year}
 License Plate: ${report.vehicle.plate}
@@ -284,7 +361,7 @@ End of Report
           </select>
         </label>
         <label className="label">Date
-          <input type="date" className="input mt-1" value={form.date} onChange={e=>setForm({...form,date:e.target.value, timeSlot:''})} required min={todayStr()} />
+          <input type="date" className="input mt-1" value={form.date} onChange={e=>setForm({...form,date:e.target.value, timeSlot:''})} required min={todayStr()} max={twoWeeksFromTodayStr()} />
         </label>
         <label className="label">Time Slot
           <select className="input mt-1" value={form.timeSlot} onChange={e=>setForm({...form,timeSlot:e.target.value})} required disabled={!form.date}>
@@ -341,10 +418,9 @@ End of Report
           </div>
         )}
         
-        <Input label="Make" value={form.vehicle.make} onChange={e=>changeVehicle('make', e.target.value)} required />
         <Input label="Model" value={form.vehicle.model} onChange={e=>changeVehicle('model', e.target.value)} required />
         <Input label="Year" type="number" value={form.vehicle.year} onChange={e=>changeVehicle('year', e.target.value)} required min="1980" max="2100" />
-        <Input label="Plate" value={form.vehicle.plate} onChange={e=>changeVehicle('plate', e.target.value)} required />
+        <Input label="Plate" value={form.vehicle.plate} onChange={e=>changeVehicle('plate', formatPlate(e.target.value))} placeholder="ABB-XXXX, AB-XXXX, or 32-XXXX" required />
         <label className="md:col-span-2 label">Notes
           <textarea className="input mt-1" rows="3" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/>
         </label>
@@ -394,7 +470,7 @@ End of Report
                 </span>
               </div>
               <div className="col-span-2">
-                <span className="font-medium">Vehicle:</span> {bookingSuccess.vehicle.make} {bookingSuccess.vehicle.model} ({bookingSuccess.vehicle.plate})
+                <span className="font-medium">Vehicle:</span> {bookingSuccess.vehicle.model} ({bookingSuccess.vehicle.plate})
               </div>
             </div>
           </div>

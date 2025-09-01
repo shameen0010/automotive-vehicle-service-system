@@ -52,7 +52,6 @@ Status: ${report.status}
 Estimated Duration: ${report.estimatedDuration} minutes
 
 VEHICLE INFORMATION:
-Make: ${report.vehicleMake}
 Model: ${report.vehicleModel}
 Year: ${report.vehicleYear}
 License Plate: ${report.vehiclePlate}
@@ -218,7 +217,7 @@ Premium Service • Professional Care • Elite Experience
                   {booking.user?.name} • {booking.date} • {booking.timeSlot}
                 </p>
                 <p className="text-sm text-muted">
-                  {booking.vehicle?.make} {booking.vehicle?.model} ({booking.vehicle?.plate})
+                  {booking.vehicle?.model} ({booking.vehicle?.plate})
                 </p>
                 {booking.advisor && (
                   <p className="text-sm text-muted mt-1">

@@ -13,7 +13,6 @@ const __dirname = path.dirname(__filename);
 const bookingSchema = Joi.object({
   serviceType: Joi.string().valid('General Service','Oil Change','Diagnostics','Body Work').required(),
   vehicle: Joi.object({
-    make: Joi.string().required(),
     model: Joi.string().required(),
     year: Joi.number().min(1980).max(2100).required(),
     plate: Joi.string().required()
@@ -722,7 +721,6 @@ const generateBookingReport = async (req, res) => {
         estimatedDuration: booking.estimatedDuration
       },
       vehicle: {
-        make: booking.vehicle.make,
         model: booking.vehicle.model,
         year: booking.vehicle.year,
         plate: booking.vehicle.plate
@@ -910,8 +908,7 @@ const generatePDFReport = async (req, res) => {
     // Section: Vehicle Information - Pure black headers, pure black content
     doc.font('Times-Bold').fontSize(13).fillColor('#000000').text('VEHICLE INFORMATION', 50, doc.y + 5);
     doc.font('Times-Roman').fontSize(10).fillColor('#000000');
-    doc.text(`Make: ${booking.vehicle.make}`, 70, doc.y + 5);
-    doc.text(`Model: ${booking.vehicle.model}`, 70, doc.y);
+    doc.text(`Model: ${booking.vehicle.model}`, 70, doc.y + 5);
     doc.text(`Year: ${booking.vehicle.year}`, 70, doc.y);
     doc.text(`License Plate: ${booking.vehicle.plate}`, 70, doc.y);
     doc.moveDown(0.5);
