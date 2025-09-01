@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                     label="Name"
                     type="text"
                     value={form.name}
-                    onChange={(e) => setForm({...form, name: e.target.value})}
+                    onChange={(e) => setForm({...form, name: e.target.value.replace(/[^a-zA-Z\s]/g, '')})}
                     required
                   />
                   <Input

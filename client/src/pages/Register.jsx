@@ -79,7 +79,7 @@ export default function Register(){
     <div className="max-w-md mx-auto card p-8">
       <h1 className="text-2xl font-semibold mb-6 section-title">Register</h1>
       <form onSubmit={submit} className="grid gap-6">
-        <Input label="Name" value={form.name} onChange={e=>setForm({...form, name: e.target.value})} required />
+        <Input label="Name" value={form.name} onChange={e=>setForm({...form, name: e.target.value.replace(/[^a-zA-Z\s]/g, '')})} required />
         <Input label="Email" type="email" value={form.email} onChange={e=>setForm({...form, email: e.target.value})} required />
         <Input label="Password" type="password" value={form.password} onChange={e=>setForm({...form, password: e.target.value})} required />
         <Input label="Confirm Password" type="password" value={form.confirmPassword} onChange={e=>setForm({...form, confirmPassword: e.target.value})} required />

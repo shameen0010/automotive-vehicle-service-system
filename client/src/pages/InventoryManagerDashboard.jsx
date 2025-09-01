@@ -136,7 +136,7 @@ export default function InventoryManagerDashboard() {
               <input
                 type="text"
                 value={form.name}
-                onChange={(e) => setForm({...form, name: e.target.value})}
+                onChange={(e) => setForm({...form, name: e.target.value.replace(/[^a-zA-Z\s]/g, '')})}
                 className="input mt-1"
                 required
               />
@@ -355,10 +355,3 @@ export default function InventoryManagerDashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
