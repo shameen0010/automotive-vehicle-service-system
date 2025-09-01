@@ -1,16 +1,11 @@
 import axios from 'axios';
 
 const api = axios.create({
-
-  baseURL: '/api',
+  baseURL: 'http://localhost:5000/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }
-
-  baseURL: 'http://localhost:5000/api',
-  withCredentials: true
-
 });
 
 // Add request interceptor to include auth headers if needed

@@ -296,27 +296,4 @@ export async function resetPassword(req, res) {
     res.status(500).json({ message: 'Internal server error' });
   }
 
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.json({ ok: true });
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + (Number(process.env.RESET_OTP_TTL_MIN || 10) * 60000));
-  user.resetOTP = { code: otp, expiresAt };
-  await user.save();
-  await sendMail({ to: email, subject: 'Auto Elite – Reset OTP', text: `OTP: ${otp} (valid ${process.env.RESET_OTP_TTL_MIN}m)` });
-  res.json({ ok: true });
-}
-
-export async function resetPassword(req, res) {
-  const { email, otp, newPassword } = req.body;
-  const user = await User.findOne({ email }).select('+password');
-  if (!user || !user.resetOTP) return res.status(400).json({ message: 'Invalid request' });
-  if (user.resetOTP.code !== otp || new Date() > new Date(user.resetOTP.expiresAt))
-    return res.status(400).json({ message: 'Invalid/expired OTP' });
-  user.password = newPassword;
-  user.resetOTP = undefined;
-  await user.save();
-  await AuditLog.create({ actor: user._id, action: 'password_reset' });
-  res.json({ ok: true });
-
 }
