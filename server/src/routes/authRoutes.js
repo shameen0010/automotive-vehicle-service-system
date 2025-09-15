@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authLimiter } from '../middleware/rateLimit.js';
 import { login, register, me, logout, requestPasswordReset, resetPassword } from '../controllers/authController.js';
-import { authRequired } from '../middleware/auth.js';
+import authRequired from '../middleware/auth.js';
 // Multer setup for avatar upload
 import multer from 'multer';
 import path from 'path';
