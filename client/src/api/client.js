@@ -5,14 +5,27 @@ const API_BASE =
   'http://localhost:5000';
 
 const api = axios.create({
+
   baseURL: API_BASE,
   withCredentials: true
+
+  baseURL: 'http://localhost:5000/api',
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+
 });
 
 // Add request interceptor to include auth headers if needed
 api.interceptors.request.use(
   (config) => {
+
+    console.log('API Request:', config.method?.toUpperCase(), config.url);
+    console.log('Request data:', config.data);
+
     // You can add any request modifications here if needed
+
     return config;
   },
   (error) => {

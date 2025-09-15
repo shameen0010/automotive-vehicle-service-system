@@ -47,7 +47,13 @@ export default function Login(){
         {err && <p className="text-red-600 mb-2">{err}</p>}
         <button className="btn btn-primary mt-2">Login</button>
       </form>
+
+      <p className="text-sm mt-4">
+        No account? <Link to="/register" className="text-blue-600">Register</Link> | <Link to="/forgot-password" className="text-blue-600">Forgot Password?</Link>
+      </p>
+
       <p className="text-sm mt-4">No account? <Link to="/register" className="text-blue-600">Register</Link></p>
+
     </div>
   );
 }

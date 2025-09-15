@@ -108,7 +108,7 @@ export default function Profile(){
       </div>
 
       <form onSubmit={save}>
-        <Input label="Name" value={name} onChange={e=>setName(e.target.value)} />
+        <Input label="Name" value={name} onChange={e=>setName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))} />
         <Input label="Phone" value={phone} onChange={e=>setPhone(e.target.value)} />
         <button className="btn bg-gradient-to-r from-primary to-accent2 text-slate-900 shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:from-accent2 hover:to-primary mt-4" disabled={saving}>
           {saving ? 'Saving...' : 'Save'}
