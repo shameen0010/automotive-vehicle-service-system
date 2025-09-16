@@ -109,12 +109,12 @@ export default function BookAppointment(){
       setAvailableSlots([]);
       return; 
     }
-    api.get(`/bookings/booked-slots?date=${form.date}`)
+    api.get(`/api/bookings/booked-slots?date=${form.date}`)
       .then(res => setBookedSlots(res.data.slots))
       .catch(() => setBookedSlots([]));
     
     // Also fetch available slots for queue information
-    api.get(`/bookings/available-slots?date=${form.date}`)
+    api.get(`/api/bookings/available-slots?date=${form.date}`)
       .then(res => setAvailableSlots(res.data.availableSlots))
       .catch(() => setAvailableSlots([]));
   }, [form.date]);
@@ -181,7 +181,7 @@ export default function BookAppointment(){
 
     setSubmitting(true);
     try {
-      const { data } = await api.post('/bookings', form);
+      const { data } = await api.post('/api/bookings', form);
       setBookingSuccess(data.booking);
       setForm({
         serviceType:'General Service',
@@ -200,7 +200,7 @@ export default function BookAppointment(){
 
   const generateReport = async (bookingId) => {
     try {
-      const response = await api.get(`/bookings/${bookingId}/report`);
+      const response = await api.get(`/api/bookings/${bookingId}/report`);
       const report = response.data.report;
       
       // Create a formatted report text
@@ -291,7 +291,7 @@ End of Report
 
   const generatePDFReport = async (bookingId) => {
     try {
-      const response = await api.get(`/bookings/${bookingId}/report/pdf`, { 
+      const response = await api.get(`/api/bookings/${bookingId}/report/pdf`, { 
         responseType: 'blob' 
       });
       const blob = new Blob([response.data], { type: 'application/pdf' });

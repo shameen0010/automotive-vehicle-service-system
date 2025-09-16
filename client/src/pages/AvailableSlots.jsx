@@ -41,7 +41,7 @@ import React, { useState, useEffect } from 'react';
 
       setLoadingSlots(true);
       try {
-        const { data } = await api.get(`/bookings/available-slots?date=${encodeURIComponent(selectedDate)}`);
+        const { data } = await api.get(`/api/bookings/available-slots?date=${encodeURIComponent(selectedDate)}`);
         const slots = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
         setAvailableSlots(slots);
       } catch (error) {
@@ -59,7 +59,7 @@ import React, { useState, useEffect } from 'react';
       setQueueInfo(null); // clear stale data while loading
       try {
         const { data } = await api.get(
-          `/bookings/queue-info?date=${encodeURIComponent(selectedDate)}&timeSlot=${encodeURIComponent(timeSlot)}`
+          `/api/bookings/queue-info?date=${encodeURIComponent(selectedDate)}&timeSlot=${encodeURIComponent(timeSlot)}`
         );
         setQueueInfo(data || null);
       } catch (error) {

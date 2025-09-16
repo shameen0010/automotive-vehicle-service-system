@@ -23,6 +23,7 @@ import auditRoutes from './routes/inventory/audit.js';
 import categoriesRoutes from './routes/inventory/categories.js';
 import brandsRoutes from './routes/inventory/brands.js';
 import vehicleModelsRoutes from './routes/inventory/vehicleModels.js';
+import inventoryReportsRoutes from './routes/inventory/reports.js';
 
 // Import services
 import { setIo, scanAllPartsForLowStock } from './services/inventory/stockService.js';
@@ -39,6 +40,12 @@ if (missingEnvVars.length > 0) {
   if (!process.env.JWT_ACCESS_SECRET) {
     process.env.JWT_ACCESS_SECRET = 'dev-secret-key-change-in-production';
     console.log('🔑 Using default JWT secret for development');
+  }
+
+  // Set default JWT refresh secret for development if not provided
+  if (!process.env.JWT_REFRESH_SECRET) {
+    process.env.JWT_REFRESH_SECRET = 'dev-refresh-secret-key-change-in-production';
+    console.log('🔄 Using default JWT refresh secret for development');
   }
 }
 
@@ -135,6 +142,9 @@ app.use('/api/bookings', bookingRoutes);
 
 // inventory routes
 app.use('/api/inventory/items', inventoryItemsRoutes);
+import dashboardRoutes from './routes/inventory/dashboard.js';
+app.use('/api/inventory/dashboard', dashboardRoutes);
+app.use('/api/inventory/reports', inventoryReportsRoutes);
 app.use('/api/parts', partsRoutes);
 app.use('/api/suppliers', suppliersRoutes);
 app.use('/api/purchase-orders', purchaseOrdersRoutes);

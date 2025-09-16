@@ -33,7 +33,9 @@ export default function SuppliersPage() {
       if (statusFilter) {
         params.append('status', statusFilter);
       }
-      if (activeFilter !== 'all') {
+      if (activeFilter === 'all') {
+        params.append('showAll', 'true');
+      } else {
         params.append('isActive', activeFilter === 'active');
       }
       
@@ -56,7 +58,7 @@ export default function SuppliersPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter]);
+  }, [currentPage, searchQuery, statusFilter, activeFilter]);
 
   const handleFilterChange = (key, value) => {
     if (key === 'status') setStatusFilter(value);
@@ -79,23 +81,19 @@ export default function SuppliersPage() {
   };
 
   const handleDeactivate = async (supplier) => {
-    if (window.confirm(`Are you sure you want to deactivate "${supplier.name}"?`)) {
-      console.log('Deactivating supplier:', supplier._id);
+    if (!window.confirm(`Are you sure you want to deactivate "${supplier.name}"?`)) return;
+    try {
+      setLoading(true);
+      await api.delete(`/api/suppliers/${supplier._id}`);
+      fetchSuppliers();
+    } catch (e) {
+      console.error('Failed to deactivate supplier', e);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filters = [
-    {
-      key: 'status',
-      label: 'Status',
-      value: statusFilter,
-      placeholder: 'All Status',
-      options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' }
-      ]
-    }
-  ];
+  const filters = [];
 
   const actions = [
     {

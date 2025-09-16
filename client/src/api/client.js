@@ -1,28 +1,24 @@
 import axios from 'axios';
 
+// Prefer Vite proxy in dev; allow override via VITE_API_BASE
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  'http://localhost:5000';
+  '';
 
 const api = axios.create({
-
   baseURL: API_BASE,
-  withCredentials: true
-
-  baseURL: 'http://localhost:5000/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }
-
 });
 
 // Add request interceptor to include auth headers if needed
 api.interceptors.request.use(
   (config) => {
 
-    console.log('API Request:', config.method?.toUpperCase(), config.url);
-    console.log('Request data:', config.data);
+    // console.debug('API Request:', config.method?.toUpperCase(), config.url);
+    // console.debug('Request data:', config.data);
 
     // You can add any request modifications here if needed
 

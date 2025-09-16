@@ -361,8 +361,11 @@ export default function PartFormPage() {
       }
       delete payload.categoryId;
 
-      // Ensure suppliers array is sent
-      payload.suppliers = Array.isArray(form.suppliers) ? form.suppliers : [];
+      // Ensure suppliers contain only valid ObjectIds; drop placeholders
+      const isObjectId = (v) => /^[0-9a-fA-F]{24}$/.test(String(v));
+      payload.suppliers = Array.isArray(form.suppliers)
+        ? form.suppliers.filter(isObjectId)
+        : [];
 
       // Auto-generate partCode on create
       if (!id) {

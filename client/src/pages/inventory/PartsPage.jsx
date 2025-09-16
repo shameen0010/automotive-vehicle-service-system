@@ -38,7 +38,9 @@ export default function PartsPage() {
       if (categoryFilter) {
         params.append('category', categoryFilter);
       }
-      if (activeFilter !== 'all') {
+      if (activeFilter === 'all') {
+        params.append('showAll', 'true');
+      } else {
         params.append('isActive', activeFilter === 'active');
       }
       
@@ -63,7 +65,7 @@ export default function PartsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, categoryFilter]);
+  }, [currentPage, searchQuery, statusFilter, categoryFilter, activeFilter]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -103,17 +105,6 @@ export default function PartsPage() {
 
   const filters = [
     {
-      key: 'status',
-      label: 'Status',
-      value: statusFilter,
-      placeholder: 'All Status',
-      options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' },
-        { value: 'low_stock', label: 'Low Stock' }
-      ]
-    },
-    {
       key: 'category',
       label: 'Category',
       value: categoryFilter,
@@ -137,34 +128,6 @@ export default function PartsPage() {
       ),
       onClick: () => navigate('/parts/new'),
       className: 'btn-primary'
-    },
-    {
-      label: 'Show Inactive',
-      icon: () => (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      ),
-      onClick: async () => {
-        try {
-          setLoading(true);
-          const params = new URLSearchParams({ page: 1, limit: 10, isActive: false });
-          const response = await api.get(`/api/parts?${params}`);
-          const data = response.data;
-          setPartsData({
-            items: data.items || [],
-            total: data.total || 0,
-            lowStockCount: data.lowStockCount || 0,
-            page: 1,
-            pages: data.pages || 1
-          });
-        } catch (e) {
-          console.error('Failed to load inactive parts', e);
-        } finally {
-          setLoading(false);
-        }
-      },
-      className: 'btn-secondary'
     }
   ];
 

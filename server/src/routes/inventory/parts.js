@@ -154,10 +154,11 @@ router.post("/check-stock", auth, async (req, res) => {
 // Main parts listing
 router.get("/", auth, async (req, res, next) => {
   try {
-    const { lowStock, q, page = 1, limit = 20, isActive } = req.query;
+    const { lowStock, q, page = 1, limit = 20, isActive, showAll } = req.query;
     const filter = {};
-    if (typeof isActive === 'undefined') {
-      filter.isActive = true;
+    if (showAll === 'true' || typeof isActive === 'undefined') {
+      // Show both active and inactive parts
+      // Don't set isActive filter
     } else {
       filter.isActive = String(isActive) === 'true';
     }
