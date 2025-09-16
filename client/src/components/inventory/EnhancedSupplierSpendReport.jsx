@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import ReportHeader from '../../components/inventory/ReportHeader';
-import FilterPanel from '../../components/inventory/FilterPanel';
-import EnhancedDataTable from '../../components/inventory/EnhancedDataTable';
-import ExportActions from '../../components/inventory/ExportActions';
+import ReportHeader from './ReportHeader';
+import FilterPanel from './FilterPanel';
+import EnhancedDataTable from './EnhancedDataTable';
+import ExportActions from './ExportActions';
 import api, { getSupplierSpendReport, downloadSupplierSpendCSV, downloadSupplierSpendPDF } from '../../services/inventoty/api';
 
-export default function SupplierSpendReport() {
+export default function EnhancedSupplierSpendReport() {
   const [loading, setLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [rows, setRows] = useState([]);
@@ -33,9 +33,11 @@ export default function SupplierSpendReport() {
     try {
       const resp = await api.get('/api/suppliers', { params: { showAll: true, limit: 1000 } });
       const items = resp.data.suppliers || resp.data.items || resp.data || [];
-      setSupplierOptions(items.map(s => ({ value: s._id, label: s.companyName || s.displayName || s.name })));
+      setSupplierOptions(items.map(s => ({ 
+        value: s._id, 
+        label: s.companyName || s.displayName || s.name 
+      })));
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to load suppliers', e);
     }
   }, []);
@@ -214,12 +216,12 @@ export default function SupplierSpendReport() {
           icon={ChartIcon}
           actions={[
             {
-              label: 'Refresh Data',
-              onClick: fetchReport,
+              label: 'Export Report',
+              onClick: () => {},
               variant: 'secondary',
               icon: () => (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3" />
                 </svg>
               )
             }
@@ -256,4 +258,3 @@ export default function SupplierSpendReport() {
     </div>
   );
 }
-

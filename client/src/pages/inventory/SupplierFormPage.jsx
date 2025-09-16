@@ -1,18 +1,20 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../../api/client";
 import { useNavigate, useParams } from "react-router-dom";
+import FormField from "../../components/inventory/FormField";
+import FormSection from "../../components/inventory/FormSection";
+import ActionButtons from "../../components/inventory/ActionButtons";
+import LoadingSpinner from "../../components/inventory/LoadingSpinner";
+import ErrorAlert from "../../components/inventory/ErrorAlert";
+import SuccessToast from "../../components/inventory/SuccessToast";
 
-// Step 1: extend form state to include new supplier schema fields (keeps legacy fields for current UI)
 const empty = { 
-  // legacy/simple fields currently used by the UI
   name: "", 
   email: "", 
   phone: "", 
   address: "", 
   contactPerson: "", 
   notes: "",
-
-  // new schema (will be wired in later steps)
   companyName: "",
   displayName: "",
   businessRegistrationNo: "",
@@ -48,17 +50,13 @@ const empty = {
   isActive: true
 };
 
-// Validation rules (expanded to include new schema inputs incrementally)
 const validationRules = {
-  // legacy fields still rendered in UI
   name: { required: true, minLength: 2, maxLength: 100, pattern: /^[a-zA-Z0-9\s\-_.&]+$/, message: "Name must be 2-100 characters, alphanumeric with spaces, hyphens, underscores, dots, or ampersands" },
   email: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email address" },
   phone: { pattern: /^[+]?[1-9][\d]{0,15}$/, message: "Please enter a valid phone number" },
   contactPerson: { maxLength: 100, pattern: /^[a-zA-Z\s-]+$/, message: "Contact person name must contain only letters, spaces, hyphens, or dots" },
   address: { maxLength: 200, message: "Address must be less than 200 characters" },
   notes: { maxLength: 500, message: "Notes must be less than 500 characters" },
-
-  // new schema fields to be surfaced in later steps
   companyName: { minLength: 2, maxLength: 120 },
   businessRegistrationNo: { minLength: 2, maxLength: 60 },
   "primaryContact.email": { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
@@ -72,6 +70,7 @@ export default function SupplierFormPage() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [emailExists, setEmailExists] = useState(false);
+  const [toast, setToast] = useState("");
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
@@ -79,9 +78,7 @@ export default function SupplierFormPage() {
     try {
       setLoading(true);
     const { data } = await api.get(`/api/suppliers/${id}`);
-    // Step 2 (load): map server -> UI form shape, while preserving new schema fields in state
     const mapped = {
-      // legacy/simple fields for current UI
       name: data.companyName || data.displayName || "",
       email: data.primaryContact?.email || "",
       phone: data.primaryContact?.phone || "",
@@ -95,8 +92,6 @@ export default function SupplierFormPage() {
           ].filter(Boolean).join(", ")
         : "",
       notes: data.notes || "",
-
-      // new schema fields kept in state so we don't lose them
       companyName: data.companyName || "",
       displayName: data.displayName || "",
       businessRegistrationNo: data.businessRegistrationNo || "",
@@ -134,9 +129,6 @@ export default function SupplierFormPage() {
 
   useEffect(() => { load(); }, [id, load]);
 
-  // Removed categories fetch as Supplied Categories section is no longer used
-
-  // Step 4: address helpers
   const addAddress = () => {
     setForm(prev => ({
       ...prev,
@@ -159,30 +151,24 @@ export default function SupplierFormPage() {
     });
   };
 
-  // Real-time validation
   const validateField = (name, value) => {
     const rules = validationRules[name];
     if (!rules) return "";
 
-    // Required validation
     if (rules.required && (!value || value.toString().trim() === "")) {
       return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required`;
     }
 
-    // Skip other validations if empty and not required
     if (!value || value.toString().trim() === "") return "";
 
-    // Min length validation
     if (rules.minLength && value.toString().length < rules.minLength) {
       return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} must be at least ${rules.minLength} characters`;
     }
 
-    // Max length validation
     if (rules.maxLength && value.toString().length > rules.maxLength) {
       return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} must be less than ${rules.maxLength} characters`;
     }
 
-    // Pattern validation
     if (rules.pattern && !rules.pattern.test(value.toString())) {
       return rules.message || `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} format is invalid`;
     }
@@ -190,9 +176,8 @@ export default function SupplierFormPage() {
     return "";
   };
 
-  // Check if email already exists (for new suppliers)
   const checkEmailExists = async (email) => {
-    if (!email || id) return; // Skip if editing or no email
+    if (!email || id) return;
     try {
       const { data } = await api.get(`/api/suppliers?email=${email}`);
       setEmailExists(data.items && data.items.length > 0);
@@ -220,24 +205,20 @@ export default function SupplierFormPage() {
     const { name, type } = e.target;
     const value = type === 'checkbox' ? e.target.checked : e.target.value;
     
-    // Clear previous errors
     setErrors((prev) => ({ ...prev, [name]: null }));
     setEmailExists(false);
     
-    // Update form (supports dot-notation for nested fields)
     if (name.includes('.')) {
       setFormPathValue(name, value);
     } else {
       setForm((f) => ({ ...f, [name]: value }));
     }
 
-    // Real-time validation
     const error = validateField(name, value);
     if (error) {
       setErrors((prev) => ({ ...prev, [name]: error }));
     }
 
-    // Check email existence (legacy email field)
     if (name === "email") {
       const timeoutId = setTimeout(() => checkEmailExists(value), 500);
       return () => clearTimeout(timeoutId);
@@ -248,7 +229,6 @@ export default function SupplierFormPage() {
     const { name, value } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
     
-    // Validate on blur
     const error = validateField(name, value);
     if (error) {
       setErrors((prev) => ({ ...prev, [name]: error }));
@@ -259,16 +239,12 @@ export default function SupplierFormPage() {
     const newErrors = {};
     let isValid = true;
 
-    // Legacy fields are no longer required for the updated supplier form UI
-    // Validate only new schema plus optional notes
-    const legacyToSkip = ['name','email','phone','contactPerson','address'];
     ['notes'].forEach((fieldName) => {
       const value = form[fieldName];
       const error = validateField(fieldName, value);
       if (error) { newErrors[fieldName] = error; isValid = false; }
     });
 
-    // 2) Validate new required fields (per spec)
     const requiredFlat = [
       'companyName',
       'businessRegistrationNo',
@@ -286,7 +262,6 @@ export default function SupplierFormPage() {
       }
     });
 
-    // 3) Primary contact required
     const pc = form.primaryContact || {};
     const pcRequired = [
       ['primaryContact.fullName', pc.fullName],
@@ -303,7 +278,6 @@ export default function SupplierFormPage() {
       }
     });
 
-    // 4) Lead time number >= 0
     if (form.leadTimeDays === '' || form.leadTimeDays === null || typeof form.leadTimeDays === 'undefined') {
       newErrors.leadTimeDays = 'Lead time days is required';
       isValid = false;
@@ -312,7 +286,6 @@ export default function SupplierFormPage() {
       isValid = false;
     }
 
-    // 5) At least one address line1 (head office)
     const firstAddr = Array.isArray(form.addresses) && form.addresses[0] ? form.addresses[0] : {};
     if (!firstAddr.line1 || String(firstAddr.line1).trim() === '') {
       newErrors['addresses.0.line1'] = 'Address line 1 is required';
@@ -326,10 +299,6 @@ export default function SupplierFormPage() {
       newErrors['addresses.0.country'] = 'Country is required';
       isValid = false;
     }
-
-    // Supplied categories validation removed from form
-
-    // Skip legacy email existence check; primaryContact.email is validated above
 
     setErrors(newErrors);
     return isValid;
@@ -347,7 +316,6 @@ export default function SupplierFormPage() {
     setErrors({});
     
     try {
-      // Step 2 (save): map current UI fields -> server schema payload
       const payload = {
         companyName: form.companyName || form.name,
         displayName: form.displayName || form.name,
@@ -381,7 +349,6 @@ export default function SupplierFormPage() {
           accountNumber: form.bankDetails?.accountNumber || "",
           branch: form.bankDetails?.branch || "",
         },
-        // suppliedCategories removed from form UI; omit from payload
         leadTimeDays: Number(form.leadTimeDays) || 0,
         isActive: typeof form.isActive === 'boolean' ? form.isActive : true,
         notes: form.notes || "",
@@ -389,15 +356,17 @@ export default function SupplierFormPage() {
 
       if (id) {
         await api.put(`/api/suppliers/${id}`, payload);
+        setToast("Supplier updated successfully!");
       } else {
         await api.post("/api/suppliers", payload);
+        setToast("Supplier created successfully!");
       }
-      navigate("/suppliers");
+      
+      setTimeout(() => navigate("/suppliers"), 1500);
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Failed to save supplier";
       setErrors({ submit: errorMessage });
       
-      // Handle specific server-side validation errors
       if (err.response?.data?.errors) {
         const serverErrors = {};
         err.response.data.errors.forEach(error => {
@@ -410,746 +379,405 @@ export default function SupplierFormPage() {
     }
   };
 
-  const getInputStyle = (fieldName) => {
-    const hasError = errors[fieldName];
-    const isTouched = touched[fieldName];
-    
-    return {
-      width: '100%',
-      padding: '0.75rem',
-      border: hasError ? '2px solid #dc2626' : isTouched ? '2px solid #3b82f6' : '1px solid #d1d5db',
-      borderRadius: '0.375rem',
-      fontSize: '1rem',
-      transition: 'border-color 0.2s ease-in-out',
-      backgroundColor: hasError ? '#fef2f2' : 'white',
-      outline: 'none'
-    };
-  };
-
-  const getFieldError = (fieldName) => {
-    return errors[fieldName] && touched[fieldName] ? errors[fieldName] : null;
-  };
-
   if (loading && id) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        width: '100%',
-        backgroundColor: '#f8fafc',
-        padding: '2rem',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '2rem',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-          <div style={{ color: '#6b7280' }}>Loading supplier data...</div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading supplier data..." />;
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      width: '100%', 
-      padding: '2rem',
-      backgroundColor: '#f8fafc',
-      display: 'flex',
-      justifyContent: 'center'
-    }}>
-      <div style={{ 
-        maxWidth: '600px', 
-        width: '100%',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        padding: '2rem'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '1.5rem',
-          paddingBottom: '1rem',
-          borderBottom: '1px solid #e5e7eb'
-        }}>
-          <h1 style={{ 
-            fontSize: '1.875rem', 
-            fontWeight: '600',
-            color: '#1e293b',
-            margin: 0
-          }}>{id ? "Edit Supplier" : "Add New Supplier"}</h1>
-          <button
-            type="button"
-            onClick={() => navigate("/suppliers")}
-            style={{
-              background: 'transparent',
-              border: '1px solid #d1d5db',
-              color: '#6b7280',
-              padding: '0.5rem 1rem',
-              borderRadius: '0.375rem',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            ← Back to Suppliers
-          </button>
-        </div>
-
-        {errors.submit && (
-          <div style={{
-            color: '#dc2626',
-            backgroundColor: '#fef2f2',
-            padding: '0.75rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            border: '1px solid #fecaca',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <span>⚠️</span>
-            {errors.submit}
-          </div>
-        )}
-
-        <form style={{ display: 'grid', gap: '1.5rem' }} onSubmit={submit}>
-          {/* Basic Information Section */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #e5e7eb'
-          }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
-              color: '#374151', 
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              🏢 Basic Company Information
-            </h2>
-            
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Company Name
-                </label>
-                <input 
-                  style={getInputStyle('companyName')}
-                  name="companyName" 
-                  placeholder="e.g., Colombo Auto Parts Distributors" 
-                  value={form.companyName || ""} 
-                  onChange={onChange}
-                  onBlur={onBlur}
-                />
-                {getFieldError('companyName') && (
-                  <div style={{ 
-                    color: '#dc2626', 
-                    fontSize: '0.875rem', 
-                    marginTop: '0.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}>
-                    <span>⚠️</span>
-                    {getFieldError('companyName')}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Display Name
-                </label>
-                <input 
-                  style={getInputStyle('displayName')}
-                  name="displayName" 
-                  placeholder="e.g., Colombo Auto" 
-                  value={form.displayName || ""} 
-                  onChange={onChange}
-                  onBlur={onBlur}
-                />
-                {getFieldError('displayName') && (
-                  <div style={{ 
-                    color: '#dc2626', 
-                    fontSize: '0.875rem', 
-                    marginTop: '0.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}>
-                    <span>⚠️</span>
-                    {getFieldError('displayName')}
-                  </div>
-                )}
-              </div>
+    <div className="bg-app min-h-screen">
+      <div className="app-container">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="section-title mb-2">
+                {id ? "Edit Supplier" : "Add New Supplier"}
+              </h1>
+              <p className="text-slate-400">
+                {id ? "Update supplier information and contact details" : "Create a new supplier profile"}
+              </p>
             </div>
-            <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Business Registration No.
-                </label>
-                <input 
-                  style={getInputStyle('businessRegistrationNo')}
-                  name="businessRegistrationNo" 
-                  placeholder="e.g., PV123456789" 
-                  value={form.businessRegistrationNo || ""} 
-                  onChange={onChange}
-                  onBlur={onBlur}
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Website
-                </label>
-                <input 
-                  style={getInputStyle('website')}
-                  name="website" 
-                  placeholder="e.g., https://www.colomboauto.lk" 
-                  value={form.website || ""} 
-                  onChange={onChange}
-                  onBlur={onBlur}
-                />
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/suppliers")}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <span>←</span>
+              Back to Suppliers
+            </button>
           </div>
 
-          {/* Primary Contact Information Section */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #e5e7eb'
-          }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
-              color: '#374151', 
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              📞 Primary Contact Information
-            </h2>
-            
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                  Full Name
-                </label>
-                <input
-                  style={getInputStyle('primaryContact.fullName')}
+          <ErrorAlert 
+            message={errors.submit} 
+            onDismiss={() => setErrors(prev => ({ ...prev, submit: null }))} 
+          />
+
+          <form onSubmit={submit} className="space-y-8">
+            {/* Basic Company Information */}
+            <FormSection title="Basic Company Information" icon="🏢">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Company Name"
+                  name="companyName"
+                  placeholder="e.g., Colombo Auto Parts Distributors"
+                  value={form.companyName}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  required
+                  error={errors.companyName}
+                  touched={touched.companyName}
+                />
+
+                <FormField
+                  label="Display Name"
+                  name="displayName"
+                  placeholder="e.g., Colombo Auto"
+                  value={form.displayName}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  error={errors.displayName}
+                  touched={touched.displayName}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Business Registration No."
+                  name="businessRegistrationNo"
+                  placeholder="e.g., PV123456789"
+                  value={form.businessRegistrationNo}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  required
+                  error={errors.businessRegistrationNo}
+                  touched={touched.businessRegistrationNo}
+                />
+
+                <FormField
+                  label="Website"
+                  name="website"
+                  placeholder="e.g., https://www.colomboauto.lk"
+                  value={form.website}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  error={errors.website}
+                  touched={touched.website}
+                />
+              </div>
+            </FormSection>
+
+            {/* Primary Contact Information */}
+            <FormSection title="Primary Contact Information" icon="📞">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Full Name"
                   name="primaryContact.fullName"
                   placeholder="e.g., Jane Perera"
-                  value={form.primaryContact?.fullName || ""}
+                  value={form.primaryContact?.fullName}
                   onChange={onChange}
                   onBlur={onBlur}
+                  required
+                  error={errors['primaryContact.fullName']}
+                  touched={touched['primaryContact.fullName']}
                 />
-                {getFieldError('primaryContact.fullName') && (
-                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span>⚠️</span>
-                    {getFieldError('primaryContact.fullName')}
-                  </div>
-                )}
-              </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                  Position
-                </label>
-                <input
-                  style={getInputStyle('primaryContact.position')}
+                <FormField
+                  label="Position"
                   name="primaryContact.position"
                   placeholder="e.g., Procurement Manager"
-                  value={form.primaryContact?.position || ""}
+                  value={form.primaryContact?.position}
                   onChange={onChange}
                   onBlur={onBlur}
+                  error={errors['primaryContact.position']}
+                  touched={touched['primaryContact.position']}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                  Email
-                </label>
-                <input
-                  style={getInputStyle('primaryContact.email')}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  label="Email"
                   name="primaryContact.email"
+                  type="email"
                   placeholder="e.g., jane@colomboauto.lk"
-                  value={form.primaryContact?.email || ""}
+                  value={form.primaryContact?.email}
                   onChange={onChange}
                   onBlur={onBlur}
+                  required
+                  error={errors['primaryContact.email']}
+                  touched={touched['primaryContact.email']}
                 />
-                {getFieldError('primaryContact.email') && (
-                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span>⚠️</span>
-                    {getFieldError('primaryContact.email')}
-                  </div>
-                )}
-              </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                  Phone
-                </label>
-                <input
-                  style={getInputStyle('primaryContact.phone')}
+                <FormField
+                  label="Phone"
                   name="primaryContact.phone"
                   placeholder="e.g., +94 77 123 4567"
-                  value={form.primaryContact?.phone || ""}
+                  value={form.primaryContact?.phone}
                   onChange={onChange}
                   onBlur={onBlur}
+                  required
+                  error={errors['primaryContact.phone']}
+                  touched={touched['primaryContact.phone']}
                 />
-                {getFieldError('primaryContact.phone') && (
-                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span>⚠️</span>
-                    {getFieldError('primaryContact.phone')}
-                  </div>
-                )}
-              </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                  Mobile (optional)
-                </label>
-                <input
-                  style={getInputStyle('primaryContact.mobile')}
+                <FormField
+                  label="Mobile (optional)"
                   name="primaryContact.mobile"
                   placeholder="e.g., +94 71 234 5678"
-                  value={form.primaryContact?.mobile || ""}
+                  value={form.primaryContact?.mobile}
                   onChange={onChange}
                   onBlur={onBlur}
+                  error={errors['primaryContact.mobile']}
+                  touched={touched['primaryContact.mobile']}
                 />
               </div>
-            </div>
-          </div>
+            </FormSection>
 
-          {/* Address Section (structured) */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #e5e7eb'
-          }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
-              color: '#374151', 
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              📍 Address Information
-            </h2>
-            
-            {(form.addresses || []).map((addr, index) => (
-              <div key={index} style={{
-                border: '1px solid #e5e7eb',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                marginBottom: '1rem',
-                background: 'white'
-              }}>
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Type</label>
-                    <select
-                      name={`addresses.${index}.type`}
-                      value={addr.type || 'HEAD_OFFICE'}
-                      onChange={(e)=>updateAddressField(index,'type', e.target.value)}
-                      style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-                    >
-                      <option value="HEAD_OFFICE">HEAD_OFFICE</option>
-                      <option value="WAREHOUSE">WAREHOUSE</option>
-                      <option value="BILLING">BILLING</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Line 1</label>
-                    <input
-                      style={getInputStyle(`addresses.${index}.line1`)}
-                      name={`addresses.${index}.line1`}
-                      placeholder="Street address line 1"
-                      value={addr.line1 || ''}
-                      onChange={(e)=>updateAddressField(index,'line1', e.target.value)}
-                      onBlur={onBlur}
-                    />
-                    {getFieldError(`addresses.${index}.line1`) && (
-                      <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span>⚠️</span>
-                        {getFieldError(`addresses.${index}.line1`)}
-                      </div>
+            {/* Address Information */}
+            <FormSection title="Address Information" icon="📍">
+              {form.addresses?.map((address, index) => (
+                <div key={index} className="space-y-4 p-4 bg-white/5 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-slate-300">
+                      {address.type === 'HEAD_OFFICE' ? 'Head Office' : 'Address'} {index + 1}
+                    </h4>
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => removeAddress(index)}
+                        className="btn-secondary btn-icon text-red-400 hover:text-red-300"
+                      >
+                        ×
+                      </button>
                     )}
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Line 2</label>
-                    <input
-                      style={getInputStyle(`addresses.${index}.line2`)}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      label="Address Line 1"
+                      name={`addresses.${index}.line1`}
+                      placeholder="Street address"
+                      value={address.line1}
+                      onChange={(e) => updateAddressField(index, 'line1', e.target.value)}
+                      required={index === 0}
+                      error={errors[`addresses.${index}.line1`]}
+                      touched={touched[`addresses.${index}.line1`]}
+                    />
+
+                    <FormField
+                      label="Address Line 2"
                       name={`addresses.${index}.line2`}
-                      placeholder="Street address line 2 (optional)"
-                      value={addr.line2 || ''}
-                      onChange={(e)=>updateAddressField(index,'line2', e.target.value)}
-                      onBlur={onBlur}
+                      placeholder="Apartment, suite, etc."
+                      value={address.line2}
+                      onChange={(e) => updateAddressField(index, 'line2', e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>City</label>
-                    <input
-                      style={getInputStyle(`addresses.${index}.city`)}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <FormField
+                      label="City"
                       name={`addresses.${index}.city`}
                       placeholder="City"
-                      value={addr.city || ''}
-                      onChange={(e)=>updateAddressField(index,'city', e.target.value)}
-                      onBlur={onBlur}
+                      value={address.city}
+                      onChange={(e) => updateAddressField(index, 'city', e.target.value)}
+                      required={index === 0}
+                      error={errors[`addresses.${index}.city`]}
+                      touched={touched[`addresses.${index}.city`]}
                     />
-                    {getFieldError(`addresses.${index}.city`) && (
-                      <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span>⚠️</span>
-                        {getFieldError(`addresses.${index}.city`)}
-                      </div>
-                    )}
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>State/Province</label>
-                    <input
-                      style={getInputStyle(`addresses.${index}.state`)}
+                    <FormField
+                      label="State"
                       name={`addresses.${index}.state`}
                       placeholder="State/Province"
-                      value={addr.state || ''}
-                      onChange={(e)=>updateAddressField(index,'state', e.target.value)}
-                      onBlur={onBlur}
+                      value={address.state}
+                      onChange={(e) => updateAddressField(index, 'state', e.target.value)}
                     />
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Postal Code</label>
-                    <input
-                      style={getInputStyle(`addresses.${index}.postalCode`)}
+                    <FormField
+                      label="Postal Code"
                       name={`addresses.${index}.postalCode`}
                       placeholder="Postal code"
-                      value={addr.postalCode || ''}
-                      onChange={(e)=>updateAddressField(index,'postalCode', e.target.value)}
-                      onBlur={onBlur}
+                      value={address.postalCode}
+                      onChange={(e) => updateAddressField(index, 'postalCode', e.target.value)}
                     />
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Country</label>
-                    <input
-                      style={getInputStyle(`addresses.${index}.country`)}
+                    <FormField
+                      label="Country"
                       name={`addresses.${index}.country`}
                       placeholder="Country"
-                      value={addr.country || ''}
-                      onChange={(e)=>updateAddressField(index,'country', e.target.value)}
-                      onBlur={onBlur}
+                      value={address.country}
+                      onChange={(e) => updateAddressField(index, 'country', e.target.value)}
+                      required={index === 0}
+                      error={errors[`addresses.${index}.country`]}
+                      touched={touched[`addresses.${index}.country`]}
                     />
-                    {getFieldError(`addresses.${index}.country`) && (
-                      <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span>⚠️</span>
-                        {getFieldError(`addresses.${index}.country`)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    {index > 0 && (
-                      <button type="button" onClick={() => removeAddress(index)} style={{
-                        background: 'transparent', border: '1px solid #d1d5db', color: '#ef4444', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', cursor: 'pointer'
-                      }}>Remove</button>
-                    )}
                   </div>
                 </div>
-              </div>
-            ))}
-            <button type="button" onClick={addAddress} style={{
-              background: 'transparent', border: '1px dashed #d1d5db', color: '#374151', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', cursor: 'pointer'
-            }}>+ Add Address</button>
-          </div>
+              ))}
 
-          {/* Financial & Terms Section */}
-          <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              💳 Financial & Terms
-            </h2>
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Payment Terms</label>
-                <select
+              <button
+                type="button"
+                onClick={addAddress}
+                className="btn-ghost flex items-center gap-2"
+              >
+                <span>+</span>
+                Add Another Address
+              </button>
+            </FormSection>
+
+            {/* Business Terms */}
+            <FormSection title="Business Terms" icon="💼">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  label="Payment Terms"
                   name="paymentTerms"
-                  value={form.paymentTerms || ''}
+                  value={form.paymentTerms}
                   onChange={onChange}
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                  onBlur={onBlur}
+                  required
+                  error={errors.paymentTerms}
+                  touched={touched.paymentTerms}
                 >
-                  <option value="">Select terms</option>
-                  <option value="Net 30">Net 30</option>
-                  <option value="Due on Receipt">Due on Receipt</option>
-                  <option value="50% Advance">50% Advance</option>
-                </select>
-                {getFieldError('paymentTerms') && (
-                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span>⚠️</span>
-                    {getFieldError('paymentTerms')}
-                  </div>
-                )}
-              </div>
+                  <select
+                    name="paymentTerms"
+                    value={form.paymentTerms}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    required
+                    className="select"
+                  >
+                    <option value="">Select payment terms</option>
+                    <option value="Net 30">Net 30</option>
+                    <option value="Net 60">Net 60</option>
+                    <option value="Net 90">Net 90</option>
+                    <option value="COD">Cash on Delivery</option>
+                    <option value="Advance">Advance Payment</option>
+                  </select>
+                </FormField>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Currency</label>
-                <select
+                <FormField
+                  label="Currency"
                   name="currency"
-                  value={form.currency || ''}
+                  value={form.currency}
                   onChange={onChange}
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                  onBlur={onBlur}
+                  required
+                  error={errors.currency}
+                  touched={touched.currency}
                 >
-                  <option value="">Select currency</option>
-                  <option value="LKR">LKR</option>
-                  <option value="USD">USD</option>
-                </select>
-                {getFieldError('currency') && (
-                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span>⚠️</span>
-                    {getFieldError('currency')}
-                  </div>
-                )}
-              </div>
+                  <select
+                    name="currency"
+                    value={form.currency}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    required
+                    className="select"
+                  >
+                    <option value="">Select currency</option>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="LKR">LKR - Sri Lankan Rupee</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                  </select>
+                </FormField>
 
-              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', marginBottom: '0.75rem' }}>Bank Details (optional)</h3>
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  <input style={getInputStyle('bankDetails.bankName')} name="bankDetails.bankName" placeholder="Bank Name" value={form.bankDetails?.bankName || ''} onChange={onChange} onBlur={onBlur} />
-                  <input style={getInputStyle('bankDetails.accountName')} name="bankDetails.accountName" placeholder="Account Name" value={form.bankDetails?.accountName || ''} onChange={onChange} onBlur={onBlur} />
-                  <input style={getInputStyle('bankDetails.accountNumber')} name="bankDetails.accountNumber" placeholder="Account Number" value={form.bankDetails?.accountNumber || ''} onChange={onChange} onBlur={onBlur} />
-                  <input style={getInputStyle('bankDetails.branch')} name="bankDetails.branch" placeholder="Branch" value={form.bankDetails?.branch || ''} onChange={onChange} onBlur={onBlur} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Product & Operational Section */}
-          <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              ⚙️ Product & Operational
-            </h2>
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>Lead Time (days)</label>
-                <input
+                <FormField
+                  label="Lead Time (Days)"
+                  name="leadTimeDays"
                   type="number"
                   min="0"
-                  style={getInputStyle('leadTimeDays')}
-                  name="leadTimeDays"
                   placeholder="e.g., 7"
                   value={form.leadTimeDays}
                   onChange={onChange}
                   onBlur={onBlur}
+                  required
+                  error={errors.leadTimeDays}
+                  touched={touched.leadTimeDays}
+                  helpText="Average delivery time in days"
                 />
-                {getFieldError('leadTimeDays') && (
-                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span>⚠️</span>
-                    {getFieldError('leadTimeDays')}
-                  </div>
-                )}
+              </div>
+            </FormSection>
+
+            {/* Bank Details */}
+            <FormSection title="Bank Details (Optional)" icon="🏦">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Bank Name"
+                  name="bankDetails.bankName"
+                  placeholder="e.g., Commercial Bank of Ceylon"
+                  value={form.bankDetails?.bankName}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                />
+
+                <FormField
+                  label="Branch"
+                  name="bankDetails.branch"
+                  placeholder="e.g., Colombo Main Branch"
+                  value={form.bankDetails?.branch}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input type="checkbox" id="isActive" name="isActive" checked={!!form.isActive} onChange={onChange} />
-                <label htmlFor="isActive" style={{ color: '#374151' }}>Active supplier</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Account Name"
+                  name="bankDetails.accountName"
+                  placeholder="e.g., Colombo Auto Parts Distributors"
+                  value={form.bankDetails?.accountName}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                />
+
+                <FormField
+                  label="Account Number"
+                  name="bankDetails.accountNumber"
+                  placeholder="e.g., 1234567890"
+                  value={form.bankDetails?.accountNumber}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                />
               </div>
-            </div>
-          </div>
+            </FormSection>
 
-          {/* Supplied Categories section removed */}
-
-          {/* Notes Section */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #e5e7eb'
-          }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
-              color: '#374151', 
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              📝 Additional Notes
-            </h2>
-            
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: '#374151'
-              }}>
-                Notes
-              </label>
-              <textarea 
-                style={{
-                  ...getInputStyle('notes'),
-                  minHeight: '100px',
-                  resize: 'vertical',
-                  fontFamily: 'inherit'
-                }}
-                name="notes" 
-                placeholder="Enter any additional notes about this supplier (optional)" 
-                value={form.notes || ""} 
+            {/* Additional Notes */}
+            <FormSection title="Additional Notes" icon="📝">
+              <FormField
+                label="Notes"
+                name="notes"
+                value={form.notes}
                 onChange={onChange}
                 onBlur={onBlur}
-              />
-              {getFieldError('notes') && (
-                <div style={{ 
-                  color: '#dc2626', 
-                  fontSize: '0.875rem', 
-                  marginTop: '0.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}>
-                  <span>⚠️</span>
-                  {getFieldError('notes')}
-                </div>
-              )}
-              <div style={{ 
-                fontSize: '0.75rem', 
-                color: '#6b7280', 
-                marginTop: '0.25rem',
-                textAlign: 'right'
-              }}>
-                {form.notes.length}/500 characters
-              </div>
-            </div>
-          </div>
+                error={errors.notes}
+                touched={touched.notes}
+                helpText="Any additional information about this supplier"
+              >
+                <textarea
+                  name="notes"
+                  value={form.notes}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  placeholder="Enter any additional notes about this supplier..."
+                  rows={4}
+                  className="textarea"
+                />
+              </FormField>
+            </FormSection>
 
-          {/* Form Actions */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '1rem', 
-            marginTop: '1rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid #e5e7eb'
-          }}>
-            <button 
-              disabled={loading} 
-              style={{
-                background: loading ? '#9ca3af' : '#3b82f6',
-                color: 'white',
-                opacity: loading ? 0.7 : 1,
-                padding: '0.75rem 2rem',
-                borderRadius: '0.5rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                border: 'none',
-                transition: 'all 0.2s ease-in-out',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                minWidth: '120px',
-                justifyContent: 'center'
-              }}
-              type="submit"
-              aria-label={loading ? "Saving..." : "Save supplier"}
-            >
-              {loading ? (
-                <>
-                  <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <span>💾</span>
-                  {id ? "Update Supplier" : "Save Supplier"}
-                </>
-              )}
-            </button>
-            <button 
-              style={{
-                background: 'transparent',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                padding: '0.75rem 2rem',
-                borderRadius: '0.5rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-              type="button" 
-              onClick={() => navigate("/suppliers")}
-              aria-label="Cancel"
-            >
-              <span>❌</span>
-              Cancel
-            </button>
+            <ActionButtons
+              onSave={submit}
+              onCancel={() => navigate("/suppliers")}
+              loading={loading}
+              saveText={id ? "Update Supplier" : "Create Supplier"}
+            />
+          </form>
         </div>
-      </form>
-
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          
-          input:focus, textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-          }
-          
-          input[style*="border: 2px solid #dc2626"]:focus {
-            border-color: #dc2626;
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-          }
-        `}</style>
       </div>
+
+      <SuccessToast 
+        message={toast} 
+        onClose={() => setToast("")} 
+      />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import ReportHeader from '../../components/inventory/ReportHeader';
-import FilterPanel from '../../components/inventory/FilterPanel';
-import EnhancedDataTable from '../../components/inventory/EnhancedDataTable';
-import ExportActions from '../../components/inventory/ExportActions';
+import ReportHeader from './ReportHeader';
+import FilterPanel from './FilterPanel';
+import EnhancedDataTable from './EnhancedDataTable';
+import ExportActions from './ExportActions';
 import api, { getStockSummaryReport, downloadStockSummaryCSV, downloadStockSummaryPDF } from '../../services/inventoty/api';
 
-export default function StockSummaryReport() {
+export default function EnhancedStockSummaryReport() {
   const [loading, setLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [rows, setRows] = useState([]);
@@ -23,23 +23,6 @@ export default function StockSummaryReport() {
   const [supplierId, setSupplierId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  const fetchMasterData = useCallback(async () => {
-    try {
-      const [catsRes, suppRes] = await Promise.all([
-        api.get('/api/categories'),
-        api.get('/api/suppliers', { params: { showAll: true, limit: 1000 } })
-      ]);
-      const cats = (catsRes.data || []).map(c => ({ value: c.name || c._id, label: c.name || c.displayName || 'Category' }));
-      const suppliers = (suppRes.data.suppliers || suppRes.data.items || suppRes.data || []).map(s => ({ value: s._id, label: s.companyName || s.displayName || s.name }));
-      setCategoryOptions(cats);
-      setSupplierOptions(suppliers);
-    } catch (e) {
-      // Best-effort; keep filters empty on error
-      // eslint-disable-next-line no-console
-      console.error('Failed to load master data for filters', e);
-    }
-  }, []);
 
   // Calculate additional stats
   const stats = useMemo(() => {
@@ -81,6 +64,31 @@ export default function StockSummaryReport() {
       }
     ];
   }, [summary, rows]);
+
+  const fetchMasterData = useCallback(async () => {
+    try {
+      const [catsRes, suppRes] = await Promise.all([
+        api.get('/api/categories'),
+        api.get('/api/suppliers', { params: { showAll: true, limit: 1000 } })
+      ]);
+      
+      const cats = (catsRes.data || []).map(c => ({ 
+        value: c.name || c._id, 
+        label: c.name || c.displayName || 'Category' 
+      }));
+      
+      const suppliers = (suppRes.data.suppliers || suppRes.data.items || suppRes.data || [])
+        .map(s => ({ 
+          value: s._id, 
+          label: s.companyName || s.displayName || s.name 
+        }));
+      
+      setCategoryOptions(cats);
+      setSupplierOptions(suppliers);
+    } catch (e) {
+      console.error('Failed to load master data for filters', e);
+    }
+  }, []);
 
   const fetchReport = useCallback(async () => {
     try {
@@ -360,4 +368,3 @@ export default function StockSummaryReport() {
     </div>
   );
 }
-

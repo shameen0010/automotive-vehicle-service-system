@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getInventoryOverview, getTopUsedParts, getStockSummaryReport, getSupplierSpendReport } from '../../services/inventoty/api';
-import StatCard from '../../components/ui/StatCard';
-import StatusBadge from '../../components/ui/StatusBadge';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { Line, Bar } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 import { getSocket, setSocket } from '../../services/socket';
-import NotificationBell from '../../components/inventory/NotificationBell';
 import PartListTable from '../../components/inventory/PartListTable';
+import DashboardHeader from '../../components/inventory/DashboardHeader';
+import DashboardKPIs from '../../components/inventory/DashboardKPIs';
+import DashboardCharts from '../../components/inventory/DashboardCharts';
+import DashboardWidgetToggle from '../../components/inventory/DashboardWidgetToggle';
+import EmbeddedReports from '../../components/inventory/EmbeddedReports';
+import DashboardSidebar from '../../components/inventory/DashboardSidebar';
 import api from '../../api/client';
 // Optional: live updates when server emits stock/po events
 let socketInitTried = false;
@@ -35,7 +38,13 @@ export default function InventoryDashboard() {
   });
   const [widgets, setWidgets] = useState(() => {
     const raw = localStorage.getItem('inv_dash_widgets');
-    return raw ? JSON.parse(raw) : { kpis: true, poStatus: true, topUsed: true };
+    return raw ? JSON.parse(raw) : { 
+      kpis: true, 
+      poStatus: true, 
+      topUsed: true, 
+      stockSummary: true, 
+      supplierSpend: true 
+    };
   });
   const [stockSummary, setStockSummary] = useState({ summary: null, items: [] });
   const [supplierSpend, setSupplierSpend] = useState([]);
@@ -104,6 +113,10 @@ export default function InventoryDashboard() {
     localStorage.setItem('inv_dash_auto', autoRefresh ? '1' : '0');
   }, [autoRefresh]);
 
+  const handleWidgetChange = (key, value) => {
+    setWidgets(prev => ({ ...prev, [key]: value }));
+  };
+
   useEffect(() => {
     localStorage.setItem('inv_dash_widgets', JSON.stringify(widgets));
   }, [widgets]);
@@ -155,229 +168,113 @@ export default function InventoryDashboard() {
     return {
       labels,
       datasets: [
-        { label: 'Used Qty', data: values, backgroundColor: 'rgba(16,185,129,0.6)' }
+        { 
+          label: 'Used Qty', 
+          data: values, 
+          backgroundColor: 'rgba(79, 255, 176, 0.6)',
+          borderColor: 'rgba(79, 255, 176, 0.8)',
+          borderWidth: 1,
+          borderRadius: 4
+        }
       ]
     };
   }, [topUsed]);
 
-  if (loading) return <div className="p-4"><LoadingSpinner /></div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full bg-app flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-slate-400 mt-4">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen w-full bg-app flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 px-4 pt-4">
-        <div>
-          <h1 className="text-xl font-semibold">Inventory Dashboard</h1>
-          <p className="text-slate-500 text-sm">Monitor inventory, stock levels, purchase orders and suppliers</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <select value={days} onChange={e => setDays(Number(e.target.value))} className="border rounded px-2 py-1">
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
-          </select>
-          <button onClick={load} className="px-3 py-1 border rounded">Refresh</button>
-          <label className="flex items-center gap-1 text-sm">
-            <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} /> Auto-refresh
-          </label>
-        </div>
-      </div>
+    <div className="min-h-screen w-full bg-app">
+      <div className="app-container space-y-6">
+        {/* Header */}
+        <DashboardHeader
+          days={days}
+          onDaysChange={setDays}
+          autoRefresh={autoRefresh}
+          onAutoRefreshChange={setAutoRefresh}
+          onRefresh={load}
+          loading={loading}
+        />
 
-      {widgets.kpis && (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4">
-        <StatCard title="Total Parts" value={dashboardData.stats.parts} />
-        <StatCard title="Low Stock Items" value={dashboardData.stats.lowStock} />
-        <StatCard title="Active Suppliers" value={dashboardData.stats.suppliers} />
-        <StatCard title="PO Value" value={`$${dashboardData.stats.purchaseOrdersValue.toFixed(2)}`} />
-      </div>
-      )}
+        {/* Widget Controls */}
+        <DashboardWidgetToggle
+          widgets={widgets}
+          onWidgetChange={handleWidgetChange}
+        />
 
-      <div className="flex items-center gap-3 text-sm px-4">
-        <label className="flex items-center gap-1"><input type="checkbox" checked={widgets.kpis} onChange={e=>setWidgets(v=>({...v,kpis:e.target.checked}))} /> KPIs</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={widgets.poStatus} onChange={e=>setWidgets(v=>({...v,poStatus:e.target.checked}))} /> PO Status</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={widgets.topUsed} onChange={e=>setWidgets(v=>({...v,topUsed:e.target.checked}))} /> Top Used</label>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4">
-        {widgets.poStatus && (
-        <div className="bg-white rounded shadow p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-medium">Purchase Orders by Status</h2>
-            <button className="text-blue-600 text-sm" onClick={() => navigate('/purchase-orders')}>View all</button>
-          </div>
-          <Bar data={poStatusData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
-        </div>
+        {/* KPIs */}
+        {widgets.kpis && (
+          <DashboardKPIs stats={dashboardData.stats} />
         )}
 
-        {widgets.topUsed && (
-        <div className="bg-white rounded shadow p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-medium">Top Used Parts</h2>
-            <button className="text-blue-600 text-sm" onClick={() => navigate('/parts')}>Go to parts</button>
-          </div>
-          <Bar data={topUsedData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
-          <div className="mt-3 space-y-1">
-            {topUsed.map(i => (
-              <div key={i.partId} className="flex items-center justify-between text-sm">
-                <div className="truncate">{i.partCode || i.name}</div>
-                <StatusBadge status="info" label={`Used ${i.usedQty}`} />
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Charts */}
+        {(widgets.poStatus || widgets.topUsed) && (
+          <DashboardCharts
+            poStatusData={poStatusData}
+            topUsedData={topUsedData}
+            topUsed={topUsed}
+            onNavigate={navigate}
+          />
         )}
-      </div>
 
-      {/* Embedded Stock Summary */}
-      <div className="bg-white rounded shadow p-3 mx-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-medium">Stock Summary</h2>
-          <button className="text-blue-600 text-sm" onClick={() => navigate('/reports/stock-summary')}>Open full report</button>
-        </div>
-        {stockSummary.summary ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            <StatCard title="Parts" value={stockSummary.summary.totalParts} />
-            <StatCard title="On Hand" value={stockSummary.summary.totalOnHand} />
-            <StatCard title="Available" value={stockSummary.summary.totalAvailable} />
-            <StatCard title="Value" value={`$${(stockSummary.summary.totalValuation || 0).toFixed(2)}`} />
-          </div>
-        ) : null}
-        <div className="mt-2 space-y-1">
-          {stockSummary.items.map(item => (
-            <div key={item.partId} className="flex items-center justify-between text-sm">
-              <div className="truncate">{item.partCode} — {item.name}</div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-600">Avail: {item.available}</span>
-                <span className="text-slate-600">Value: ${item.value?.toFixed?.(2) || '0.00'}</span>
+        {/* Embedded Reports */}
+        {(widgets.stockSummary || widgets.supplierSpend) && (
+          <EmbeddedReports
+            stockSummary={stockSummary}
+            supplierSpend={supplierSpend}
+            onNavigate={navigate}
+          />
+        )}
+
+        {/* Main Content: Recent Parts + Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Parts */}
+          <div className="lg:col-span-2">
+            <div className="card">
+              <div className="card-header">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="card-title">Recent Parts</h3>
+                    <p className="card-subtitle">Latest inventory additions</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => navigate('/parts')} 
+                  className="btn-ghost text-sm"
+                >
+                  View All →
+                </button>
               </div>
-            </div>
-          ))}
-          {stockSummary.items.length === 0 && (
-            <div className="text-sm text-slate-500">No data</div>
-          )}
-        </div>
-      </div>
-
-      {/* Embedded Supplier Spend */}
-      <div className="bg-white rounded shadow p-3 mx-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-medium">Supplier Spend</h2>
-          <button className="text-blue-600 text-sm" onClick={() => navigate('/reports/supplier-spend')}>Open full report</button>
-        </div>
-        <div className="space-y-1">
-          {supplierSpend.map(row => (
-            <div key={row.supplierId} className="flex items-center justify-between text-sm">
-              <div className="truncate">{row.companyName || 'Unknown Supplier'}</div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-600">Orders: {row.totalOrders}</span>
-                <span className="text-slate-600">Spend: ${Number(row.totalAmount||0).toFixed(2)}</span>
-              </div>
-            </div>
-          ))}
-          {supplierSpend.length === 0 && (
-            <div className="text-sm text-slate-500">No data</div>
-          )}
-        </div>
-      </div>
-
-      {/* Combined Main Content: Recent Parts + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 px-4 py-4">
-        <div className="lg:col-span-2 flex flex-col">
-          <div className="bg-white rounded shadow flex-1 flex flex-col">
-            <div className="flex items-center justify-between p-3 border-b">
-              <h2 className="font-medium">Recent Parts</h2>
-              <button onClick={() => navigate('/parts')} className="text-blue-600 text-sm">View All →</button>
-            </div>
-            <div className="p-3 flex-1 flex flex-col">
-              <PartListTable
-                data={{ items: dashboardData.recentParts }}
-                onEdit={(part) => navigate(`/parts/${part._id}/edit`)}
-                onDeactivate={(part) => console.log('Deactivate part:', part._id)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {/* Low Stock Alert */}
-          <div className="bg-white rounded shadow">
-            <div className="flex items-center justify-between p-3 border-b">
-              <h3 className="font-medium">Low Stock Alert</h3>
-              <span className="badge chip-accent">{dashboardData.lowStockParts.length} items</span>
-            </div>
-            <div className="p-3">
-              {dashboardData.lowStockParts.length === 0 ? (
-                <div className="text-center py-6">
-                  <div className="text-4xl mb-2">✅</div>
-                  <p className="text-slate-500">All parts in stock!</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {dashboardData.lowStockParts.slice(0, 5).map(part => (
-                    <div key={part._id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                      <div>
-                        <div className="font-medium text-slate-700 text-sm">{part.name}</div>
-                        <div className="text-xs text-slate-500">{part.partCode}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-red-600">{part.stock?.onHand || 0}</div>
-                        <div className="text-xs text-slate-500">Min: {part.stock?.reorderLevel || 0}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={() => navigate('/low-stock')} className="btn-secondary w-full text-sm">View All Low Stock Items</button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded shadow">
-            <div className="p-3 border-b">
-              <h3 className="font-medium">Quick Actions</h3>
-            </div>
-            <div className="p-3 space-y-3">
-              <button onClick={() => navigate('/parts/new')} className="btn-primary w-full justify-start">Add New Part</button>
-              <button onClick={() => navigate('/suppliers/new')} className="btn-secondary w-full justify-start">Add Supplier</button>
-              <button onClick={() => navigate('/purchase-orders/new')} className="btn-secondary w-full justify-start">Create Purchase Order</button>
-              <button onClick={() => navigate('/inventory/audit')} className="btn-ghost w-full justify-start">View Audit Logs</button>
-            </div>
-          </div>
-
-          {/* Recent Activity (static placeholders) */}
-          <div className="bg-white rounded shadow">
-            <div className="p-3 border-b">
-              <h3 className="font-medium">Recent Activity</h3>
-            </div>
-            <div className="p-3 space-y-3">
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-white/50">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div className="flex-1 text-sm">
-                  <div className="text-slate-700">Part updated</div>
-                  <div className="text-slate-500 text-xs">2 minutes ago</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-white/50">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1 text-sm">
-                  <div className="text-slate-700">PO approved</div>
-                  <div className="text-slate-500 text-xs">1 hour ago</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-white/50">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div className="flex-1 text-sm">
-                  <div className="text-slate-700">Low stock alert</div>
-                  <div className="text-slate-500 text-xs">3 hours ago</div>
-                </div>
+              <div className="card-body">
+                <PartListTable
+                  data={{ items: dashboardData.recentParts }}
+                  onEdit={(part) => navigate(`/parts/${part._id}/edit`)}
+                  onDeactivate={(part) => console.log('Deactivate part:', part._id)}
+                />
               </div>
             </div>
           </div>
+
+          {/* Sidebar */}
+          <DashboardSidebar
+            lowStockParts={dashboardData.lowStockParts}
+            onNavigate={navigate}
+          />
         </div>
       </div>
     </div>
   );
 }
-
-

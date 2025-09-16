@@ -373,3 +373,117 @@ export const generatePurchaseOrdersSummaryPDF = async (purchaseOrders, suppliers
     }
   });
 };
+
+/**
+ * Generate PDF for stock summary report
+ */
+export const generateStockSummaryPDF = async (data) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 40, info: { Title: 'Stock Summary Report', Author: 'Automotive Service Management System' } });
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+      // Header
+      doc.font('Helvetica-Bold').fontSize(20).text('STOCK SUMMARY REPORT', { align: 'center' }).moveDown(0.5);
+      doc.font('Helvetica').fontSize(10).text(`Generated on: ${new Date().toLocaleString()}`, { align: 'center' }).moveDown(1);
+
+      // Summary
+      doc.font('Helvetica-Bold').fontSize(12).text('Overview').moveDown(0.3);
+      doc.font('Helvetica').fontSize(10)
+        .text(`Total Parts: ${data.summary.totalParts}`)
+        .text(`Total On Hand: ${data.summary.totalOnHand}`)
+        .text(`Total Available: ${data.summary.totalAvailable}`)
+        .text(`Stock Value: $${Number(data.summary.totalValuation || 0).toFixed(2)}`)
+        .moveDown(0.8);
+
+      // Table headers
+      const headers = ['Part Code','Name','Category','OnHand','Reserved','Avail','Min','Max','Reorder','Status','Unit','Value'];
+      const colX = [40, 100, 240, 320, 360, 405, 445, 480, 515, 560, 600, 640];
+      const headerY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(9);
+      headers.forEach((h, i) => { doc.text(h, colX[i], headerY, { width: (colX[i+1]||690) - colX[i] - 2 }); });
+      doc.moveTo(40, headerY + 12).lineTo(690, headerY + 12).stroke();
+
+      // Rows
+      doc.font('Helvetica').fontSize(9);
+      let y = headerY + 18;
+      data.items.forEach((r) => {
+        if (y > 740) {
+          doc.addPage();
+          y = 40;
+        }
+        const values = [
+          r.partCode,
+          r.name,
+          r.category,
+          String(r.onHand),
+          String(r.reserved),
+          String(r.available),
+          String(r.minLevel ?? ''),
+          String(r.maxLevel ?? ''),
+          String(r.reorderLevel ?? ''),
+          r.status || '',
+          `$${Number(r.unitPrice || 0).toFixed(2)}`,
+          `$${Number(r.value || 0).toFixed(2)}`
+        ];
+        values.forEach((v, i) => { doc.text(v, colX[i], y, { width: (colX[i+1]||690) - colX[i] - 2 }); });
+        y += 14;
+      });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+/**
+ * Generate PDF for supplier spend report
+ */
+export const generateSupplierSpendPDF = async (data) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 40, info: { Title: 'Supplier Spend Report', Author: 'Automotive Service Management System' } });
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+      // Header
+      doc.font('Helvetica-Bold').fontSize(20).text('SUPPLIER SPEND REPORT', { align: 'center' }).moveDown(0.5);
+      doc.font('Helvetica').fontSize(10).text(`Generated on: ${new Date().toLocaleString()}`, { align: 'center' }).moveDown(1);
+
+      // Table headers
+      const headers = ['Supplier','Orders','Total','Avg','Min','Max','First','Last'];
+      const colX = [40, 240, 300, 360, 420, 480, 540, 600];
+      const headerY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(9);
+      headers.forEach((h, i) => { doc.text(h, colX[i], headerY, { width: (colX[i+1]||690) - colX[i] - 2 }); });
+      doc.moveTo(40, headerY + 12).lineTo(690, headerY + 12).stroke();
+
+      // Rows
+      doc.font('Helvetica').fontSize(9);
+      let y = headerY + 18;
+      data.rows.forEach(r => {
+        if (y > 740) { doc.addPage(); y = 40; }
+        const values = [
+          r.companyName || '',
+          String(r.totalOrders || 0),
+          `$${Number(r.totalAmount || 0).toFixed(2)}`,
+          `$${Number(r.avgOrderValue || 0).toFixed(2)}`,
+          `$${Number(r.minOrderValue || 0).toFixed(2)}`,
+          `$${Number(r.maxOrderValue || 0).toFixed(2)}`,
+          r.firstOrderDate ? new Date(r.firstOrderDate).toISOString().split('T')[0] : '',
+          r.lastOrderDate ? new Date(r.lastOrderDate).toISOString().split('T')[0] : ''
+        ];
+        values.forEach((v, i) => { doc.text(v, colX[i], y, { width: (colX[i+1]||690) - colX[i] - 2 }); });
+        y += 14;
+      });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
