@@ -20,6 +20,7 @@ const empty = {
   unit: "pcs",
   stock: { onHand: 0, minLevel: 0, maxLevel: 0, reorderLevel: 0 },
   cost: { lastPurchasePrice: 0, currency: "USD" },
+  sellingPrice: 0,
   notes: "",
   specifications: {},
   suppliers: [],
@@ -175,6 +176,12 @@ export default function PartFormPage() {
       if (num > 999999.99) return "Price must be less than 1,000,000";
     }
     
+    if (name === "sellingPrice") {
+      const num = Number(value);
+      if (isNaN(num) || num < 0) return "Selling price must be a positive number";
+      if (num > 999999.99) return "Selling price must be less than 1,000,000";
+    }
+    
     if (name.startsWith("stock.")) {
       const num = Number(value);
       if (isNaN(num) || num < 0) return "Quantity must be a positive number";
@@ -208,6 +215,8 @@ export default function PartFormPage() {
     } else if (name.startsWith("cost.")) {
       const key = name.split(".")[1];
       setForm((f) => ({ ...f, cost: { ...f.cost, [key]: key === "lastPurchasePrice" ? Number(value) : value } }));
+    } else if (name === "sellingPrice") {
+      setForm((f) => ({ ...f, sellingPrice: value === "" ? "" : Number(value) }));
     } else if (name === "compatibleModels") {
       const selected = Array.from(e.target.selectedOptions, opt => opt.value);
       setForm((f) => ({ ...f, compatibleModels: selected }));
@@ -390,7 +399,7 @@ export default function PartFormPage() {
 
           <form onSubmit={submit} className="space-y-8">
             {/* Basic Information */}
-            <FormSection title="Basic Information" icon="📋">
+            <FormSection title="Basic Information" icon="📋" className="relative z-20">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   label="Brand"
@@ -474,7 +483,7 @@ export default function PartFormPage() {
                 />
                 {errors.compatibleModels && touched.compatibleModels && (
                   <div className="flex items-center gap-2 text-red-400 text-sm mt-2">
-                    <span className="text-xs">⚠️</span>
+                    <span className="text-xs">⚠</span>
                     {errors.compatibleModels}
                   </div>
                 )}
@@ -496,7 +505,7 @@ export default function PartFormPage() {
             </FormSection>
 
             {/* Stock & Pricing */}
-            <FormSection title="Stock & Pricing" icon="📊">
+            <FormSection title="Stock & Pricing" icon="📊" className="relative z-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   label="Unit"
@@ -507,8 +516,43 @@ export default function PartFormPage() {
                   required
                   error={errors.unit}
                   touched={touched.unit}
-                  helpText="Unit of measurement (e.g., pcs, kg, liters)"
-                />
+                  helpText="Unit of measurement"
+                >
+                  <select
+                    name="unit"
+                    value={form.unit}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    required
+                    className="select"
+                  >
+                    <option value="">Select a unit</option>
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="g">Grams (g)</option>
+                    <option value="liters">Liters (L)</option>
+                    <option value="ml">Milliliters (ml)</option>
+                    <option value="meters">Meters (m)</option>
+                    <option value="cm">Centimeters (cm)</option>
+                    <option value="mm">Millimeters (mm)</option>
+                    <option value="feet">Feet (ft)</option>
+                    <option value="inches">Inches (in)</option>
+                    <option value="boxes">Boxes</option>
+                    <option value="sets">Sets</option>
+                    <option value="pairs">Pairs</option>
+                    <option value="rolls">Rolls</option>
+                    <option value="sheets">Sheets</option>
+                    <option value="gallons">Gallons (gal)</option>
+                    <option value="quarts">Quarts (qt)</option>
+                    <option value="pints">Pints (pt)</option>
+                    <option value="ounces">Ounces (oz)</option>
+                    <option value="pounds">Pounds (lbs)</option>
+                    <option value="tons">Tons</option>
+                    <option value="hours">Hours</option>
+                    <option value="minutes">Minutes</option>
+                    <option value="other">Other (specify in description)</option>
+                  </select>
+                </FormField>
 
                 <FormField
                   label="Last Purchase Price"
@@ -522,6 +566,22 @@ export default function PartFormPage() {
                   error={errors['cost.lastPurchasePrice']}
                   touched={touched['cost.lastPurchasePrice']}
                   helpText="Last purchase price in USD"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  label="Selling Price"
+                  name="sellingPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.sellingPrice}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  error={errors['sellingPrice']}
+                  touched={touched['sellingPrice']}
+                  helpText="Retail/unit selling price in USD"
                 />
               </div>
 

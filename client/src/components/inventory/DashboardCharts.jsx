@@ -1,6 +1,5 @@
 import React from 'react';
 import { Bar } from 'react-chartjs-2';
-import StatusBadge from '../ui/StatusBadge';
 
 export default function DashboardCharts({ 
   poStatusData, 
@@ -88,7 +87,7 @@ export default function DashboardCharts({
           </button>
         </div>
         <div className="card-body">
-          <div className="h-64 mb-4">
+          <div className="h-64">
             <Bar 
               data={{
                 ...topUsedData,
@@ -102,30 +101,6 @@ export default function DashboardCharts({
               }} 
               options={chartOptions} 
             />
-          </div>
-          
-          {/* Top Used Parts List */}
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {topUsed.map((item, index) => (
-              <div key={item.partId || index} className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-xs font-medium text-accent">
-                    {index + 1}
-                  </div>
-                  <div className="truncate">
-                    <div className="font-medium text-slate-200 text-sm">{item.partCode || item.name}</div>
-                    {item.partCode && item.name && (
-                      <div className="text-xs text-slate-500">{item.name}</div>
-                    )}
-                  </div>
-                </div>
-                <StatusBadge 
-                  status="info" 
-                  label={`Used ${item.usedQty}`}
-                  size="sm"
-                />
-              </div>
-            ))}
           </div>
         </div>
       </div>

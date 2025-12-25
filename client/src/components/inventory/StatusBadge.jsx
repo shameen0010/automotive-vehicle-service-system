@@ -22,6 +22,8 @@ const StatusBadge = ({ status, variant = 'default', className = '' }) => {
     delivered: 'delivered',
     low: 'low',
     normal: 'normal',
+    active: 'success',
+    inactive: 'error',
     create: 'success',
     update: 'warning',
     delete: 'error'

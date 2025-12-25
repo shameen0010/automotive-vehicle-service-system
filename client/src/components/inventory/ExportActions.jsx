@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 export default function ExportActions({ 
   onExport, 
   loading = false,
+  showCSV = true,
   className = '' 
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const exportOptions = [
-    {
+    showCSV && {
       key: 'csv',
       label: 'Export as CSV',
       description: 'Comma-separated values file',
@@ -28,7 +29,7 @@ export default function ExportActions({
         </svg>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const handleExport = async (type) => {
     setIsDropdownOpen(false);

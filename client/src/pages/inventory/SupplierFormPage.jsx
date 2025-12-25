@@ -45,22 +45,143 @@ const empty = {
     accountNumber: "",
     branch: ""
   },
-  suppliedCategories: [],
   leadTimeDays: 0,
   isActive: true
 };
 
 const validationRules = {
-  name: { required: true, minLength: 2, maxLength: 100, pattern: /^[a-zA-Z0-9\s\-_.&]+$/, message: "Name must be 2-100 characters, alphanumeric with spaces, hyphens, underscores, dots, or ampersands" },
-  email: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email address" },
-  phone: { pattern: /^[+]?[1-9][\d]{0,15}$/, message: "Please enter a valid phone number" },
-  contactPerson: { maxLength: 100, pattern: /^[a-zA-Z\s-]+$/, message: "Contact person name must contain only letters, spaces, hyphens, or dots" },
-  address: { maxLength: 200, message: "Address must be less than 200 characters" },
-  notes: { maxLength: 500, message: "Notes must be less than 500 characters" },
-  companyName: { minLength: 2, maxLength: 120 },
-  businessRegistrationNo: { minLength: 2, maxLength: 60 },
-  "primaryContact.email": { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-  leadTimeDays: { pattern: /^\d+$/ }
+  // Company Information
+  companyName: { 
+    required: true, 
+    minLength: 2, 
+    maxLength: 120, 
+    pattern: /^[a-zA-Z0-9\s\-_.&()]+$/, 
+    message: "Company name must be 2-120 characters, alphanumeric with spaces, hyphens, underscores, dots, ampersands, or parentheses" 
+  },
+  displayName: { 
+    minLength: 2, 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z0-9\s\-_.&()]+$/, 
+    message: "Display name must be 2-100 characters, alphanumeric with spaces, hyphens, underscores, dots, ampersands, or parentheses" 
+  },
+  businessRegistrationNo: { 
+    required: true, 
+    minLength: 2, 
+    maxLength: 60, 
+    pattern: /^[A-Z0-9\-_]+$/, 
+    message: "Business registration number must be 2-60 characters, uppercase letters, numbers, hyphens, or underscores" 
+  },
+  website: { 
+    pattern: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/, 
+    message: "Please enter a valid website URL (e.g., https://www.example.com)" 
+  },
+  
+  // Contact Information
+  "primaryContact.fullName": { 
+    required: true, 
+    minLength: 2, 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z\s\-'.]+$/, 
+    message: "Full name must be 2-100 characters, letters, spaces, hyphens, apostrophes, or dots" 
+  },
+  "primaryContact.position": { 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z0-9\s\-_.&()]+$/, 
+    message: "Position must contain only letters, numbers, spaces, hyphens, underscores, dots, ampersands, or parentheses" 
+  },
+  "primaryContact.email": { 
+    required: true, 
+    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, 
+    message: "Please enter a valid email address" 
+  },
+  "primaryContact.phone": { 
+    required: true, 
+    pattern: /^[+]?[1-9][\d\s\-()]{7,15}$/, 
+    message: "Please enter a valid phone number (7-15 digits with optional country code)" 
+  },
+  "primaryContact.mobile": { 
+    pattern: /^[+]?[1-9][\d\s\-()]{7,15}$/, 
+    message: "Please enter a valid mobile number (7-15 digits with optional country code)" 
+  },
+  
+  // Address Information
+  "addresses.*.line1": { 
+    required: true, 
+    minLength: 5, 
+    maxLength: 200, 
+    message: "Address line 1 must be 5-200 characters" 
+  },
+  "addresses.*.line2": { 
+    maxLength: 200, 
+    message: "Address line 2 must be less than 200 characters" 
+  },
+  "addresses.*.city": { 
+    required: true, 
+    minLength: 2, 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z\s\-'.]+$/, 
+    message: "City must be 2-100 characters, letters, spaces, hyphens, apostrophes, or dots" 
+  },
+  "addresses.*.state": { 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z\s\-'.]+$/, 
+    message: "State must contain only letters, spaces, hyphens, apostrophes, or dots" 
+  },
+  "addresses.*.postalCode": { 
+    pattern: /^[A-Z0-9\s\-]{3,20}$/, 
+    message: "Postal code must be 3-20 characters, letters, numbers, spaces, or hyphens" 
+  },
+  "addresses.*.country": { 
+    required: true, 
+    minLength: 2, 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z\s\-'.]+$/, 
+    message: "Country must be 2-100 characters, letters, spaces, hyphens, apostrophes, or dots" 
+  },
+  
+  // Business Terms
+  paymentTerms: { 
+    required: true, 
+    message: "Payment terms is required" 
+  },
+  currency: { 
+    required: true, 
+    message: "Currency is required" 
+  },
+  leadTimeDays: { 
+    required: true, 
+    pattern: /^\d+$/, 
+    min: 0, 
+    max: 365, 
+    message: "Lead time days must be a number between 0 and 365" 
+  },
+  
+  // Bank Details
+  "bankDetails.bankName": { 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z0-9\s\-_.&()]+$/, 
+    message: "Bank name must contain only letters, numbers, spaces, hyphens, underscores, dots, ampersands, or parentheses" 
+  },
+  "bankDetails.accountName": { 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z0-9\s\-_.&()]+$/, 
+    message: "Account name must contain only letters, numbers, spaces, hyphens, underscores, dots, ampersands, or parentheses" 
+  },
+  "bankDetails.accountNumber": { 
+    pattern: /^[0-9]{8,20}$/, 
+    message: "Account number must be 8-20 digits" 
+  },
+  "bankDetails.branch": { 
+    maxLength: 100, 
+    pattern: /^[a-zA-Z0-9\s\-_.&()]+$/, 
+    message: "Branch must contain only letters, numbers, spaces, hyphens, underscores, dots, ampersands, or parentheses" 
+  },
+  
+  // Additional
+  notes: { 
+    maxLength: 1000, 
+    message: "Notes must be less than 1000 characters" 
+  }
 };
 
 export default function SupplierFormPage() {
@@ -114,7 +235,6 @@ export default function SupplierFormPage() {
         accountNumber: data.bankDetails?.accountNumber || "",
         branch: data.bankDetails?.branch || "",
       },
-      suppliedCategories: Array.isArray(data.suppliedCategories) ? data.suppliedCategories : [],
       leadTimeDays: typeof data.leadTimeDays === 'number' ? data.leadTimeDays : 0,
       isActive: typeof data.isActive === 'boolean' ? data.isActive : true,
     };
@@ -149,28 +269,81 @@ export default function SupplierFormPage() {
       next.addresses[index] = { ...(next.addresses[index] || {}), [field]: value };
       return next;
     });
+
+    // Validate the address field
+    const fieldKey = `addresses.${index}.${field}`;
+    const error = validateField(fieldKey, value);
+    if (error) {
+      setErrors(prev => ({ ...prev, [fieldKey]: error }));
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldKey];
+        return newErrors;
+      });
+    }
   };
 
   const validateField = (name, value) => {
-    const rules = validationRules[name];
+    // Handle nested field validation (e.g., addresses.0.line1, bankDetails.bankName)
+    let rules = validationRules[name];
+    
+    // Check for wildcard patterns for nested fields
+    if (!rules) {
+      if (name.startsWith('addresses.') && name.includes('.line1')) {
+        rules = validationRules['addresses.*.line1'];
+      } else if (name.startsWith('addresses.') && name.includes('.line2')) {
+        rules = validationRules['addresses.*.line2'];
+      } else if (name.startsWith('addresses.') && name.includes('.city')) {
+        rules = validationRules['addresses.*.city'];
+      } else if (name.startsWith('addresses.') && name.includes('.state')) {
+        rules = validationRules['addresses.*.state'];
+      } else if (name.startsWith('addresses.') && name.includes('.postalCode')) {
+        rules = validationRules['addresses.*.postalCode'];
+      } else if (name.startsWith('addresses.') && name.includes('.country')) {
+        rules = validationRules['addresses.*.country'];
+      } else if (name.startsWith('bankDetails.')) {
+        const fieldName = name.split('.').pop();
+        rules = validationRules[`bankDetails.${fieldName}`];
+      }
+    }
+    
     if (!rules) return "";
 
-    if (rules.required && (!value || value.toString().trim() === "")) {
-      return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required`;
+    const trimmedValue = value ? value.toString().trim() : "";
+    const fieldDisplayName = name.split('.').pop().replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
+    // Required field validation
+    if (rules.required && (!value || trimmedValue === "")) {
+      return rules.message || `${fieldDisplayName} is required`;
     }
 
-    if (!value || value.toString().trim() === "") return "";
+    // Skip other validations if field is empty and not required
+    if (!value || trimmedValue === "") return "";
 
-    if (rules.minLength && value.toString().length < rules.minLength) {
-      return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} must be at least ${rules.minLength} characters`;
+    // Min length validation
+    if (rules.minLength && trimmedValue.length < rules.minLength) {
+      return rules.message || `${fieldDisplayName} must be at least ${rules.minLength} characters`;
     }
 
-    if (rules.maxLength && value.toString().length > rules.maxLength) {
-      return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} must be less than ${rules.maxLength} characters`;
+    // Max length validation
+    if (rules.maxLength && trimmedValue.length > rules.maxLength) {
+      return rules.message || `${fieldDisplayName} must be less than ${rules.maxLength} characters`;
     }
 
-    if (rules.pattern && !rules.pattern.test(value.toString())) {
-      return rules.message || `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} format is invalid`;
+    // Min value validation (for numbers)
+    if (rules.min !== undefined && Number(trimmedValue) < rules.min) {
+      return rules.message || `${fieldDisplayName} must be at least ${rules.min}`;
+    }
+
+    // Max value validation (for numbers)
+    if (rules.max !== undefined && Number(trimmedValue) > rules.max) {
+      return rules.message || `${fieldDisplayName} must be at most ${rules.max}`;
+    }
+
+    // Pattern validation
+    if (rules.pattern && !rules.pattern.test(trimmedValue)) {
+      return rules.message || `${fieldDisplayName} format is invalid`;
     }
 
     return "";
@@ -180,7 +353,15 @@ export default function SupplierFormPage() {
     if (!email || id) return;
     try {
       const { data } = await api.get(`/api/suppliers?email=${email}`);
-      setEmailExists(data.items && data.items.length > 0);
+      const exists = data.items && data.items.length > 0;
+      setEmailExists(exists);
+      
+      if (exists) {
+        setErrors(prev => ({ 
+          ...prev, 
+          'primaryContact.email': 'This email address is already registered with another supplier' 
+        }));
+      }
     } catch (err) {
       console.error('Failed to check email:', err);
     }
@@ -205,21 +386,29 @@ export default function SupplierFormPage() {
     const { name, type } = e.target;
     const value = type === 'checkbox' ? e.target.checked : e.target.value;
     
-    setErrors((prev) => ({ ...prev, [name]: null }));
+    // Clear previous errors for this field
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
     setEmailExists(false);
     
+    // Update form state
     if (name.includes('.')) {
       setFormPathValue(name, value);
     } else {
       setForm((f) => ({ ...f, [name]: value }));
     }
 
+    // Validate the field
     const error = validateField(name, value);
     if (error) {
       setErrors((prev) => ({ ...prev, [name]: error }));
     }
 
-    if (name === "email") {
+    // Special handling for email validation with debouncing
+    if (name === "primaryContact.email") {
       const timeoutId = setTimeout(() => checkEmailExists(value), 500);
       return () => clearTimeout(timeoutId);
     }
@@ -239,65 +428,84 @@ export default function SupplierFormPage() {
     const newErrors = {};
     let isValid = true;
 
-    ['notes'].forEach((fieldName) => {
+    // Helper function to add error
+    const addError = (fieldName, error) => {
+      newErrors[fieldName] = error;
+      isValid = false;
+    };
+
+    // Validate company information
+    const companyFields = ['companyName', 'displayName', 'businessRegistrationNo', 'website'];
+    companyFields.forEach(fieldName => {
       const value = form[fieldName];
       const error = validateField(fieldName, value);
-      if (error) { newErrors[fieldName] = error; isValid = false; }
+      if (error) addError(fieldName, error);
     });
 
-    const requiredFlat = [
-      'companyName',
-      'businessRegistrationNo',
-      'paymentTerms',
-      'currency'
-    ];
-    requiredFlat.forEach((fieldName) => {
-      const value = form[fieldName];
-      if (!value || String(value).trim() === '') {
-        newErrors[fieldName] = `${fieldName.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase())} is required`;
-        isValid = false;
-      } else {
-        const error = validateField(fieldName, value);
-        if (error) { newErrors[fieldName] = error; isValid = false; }
-      }
-    });
-
+    // Validate primary contact information
     const pc = form.primaryContact || {};
-    const pcRequired = [
-      ['primaryContact.fullName', pc.fullName],
-      ['primaryContact.email', pc.email],
-      ['primaryContact.phone', pc.phone]
+    const contactFields = [
+      'primaryContact.fullName',
+      'primaryContact.position', 
+      'primaryContact.email',
+      'primaryContact.phone',
+      'primaryContact.mobile'
     ];
-    pcRequired.forEach(([key, value]) => {
-      if (!value || String(value).trim() === '') {
-        newErrors[key] = `${key.split('.').slice(-1)[0].replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase())} is required`;
-        isValid = false;
-      } else {
-        const err = validateField(key, value);
-        if (err) { newErrors[key] = err; isValid = false; }
-      }
+    contactFields.forEach(fieldName => {
+      const value = fieldName === 'primaryContact.fullName' ? pc.fullName :
+                   fieldName === 'primaryContact.position' ? pc.position :
+                   fieldName === 'primaryContact.email' ? pc.email :
+                   fieldName === 'primaryContact.phone' ? pc.phone :
+                   pc.mobile;
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
     });
 
-    if (form.leadTimeDays === '' || form.leadTimeDays === null || typeof form.leadTimeDays === 'undefined') {
-      newErrors.leadTimeDays = 'Lead time days is required';
-      isValid = false;
-    } else if (!/^\d+$/.test(String(form.leadTimeDays)) || Number(form.leadTimeDays) < 0) {
-      newErrors.leadTimeDays = 'Lead time days must be a non-negative integer';
-      isValid = false;
+    // Validate business terms
+    const businessFields = ['paymentTerms', 'currency', 'leadTimeDays'];
+    businessFields.forEach(fieldName => {
+      const value = form[fieldName];
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
+    });
+
+    // Validate bank details (optional fields)
+    const bankDetails = form.bankDetails || {};
+    const bankFields = [
+      'bankDetails.bankName',
+      'bankDetails.accountName',
+      'bankDetails.accountNumber',
+      'bankDetails.branch'
+    ];
+    bankFields.forEach(fieldName => {
+      const value = fieldName === 'bankDetails.bankName' ? bankDetails.bankName :
+                   fieldName === 'bankDetails.accountName' ? bankDetails.accountName :
+                   fieldName === 'bankDetails.accountNumber' ? bankDetails.accountNumber :
+                   bankDetails.branch;
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
+    });
+
+    // Validate addresses
+    if (Array.isArray(form.addresses)) {
+      form.addresses.forEach((address, index) => {
+        const addressFields = ['line1', 'line2', 'city', 'state', 'postalCode', 'country'];
+        addressFields.forEach(fieldName => {
+          const fieldKey = `addresses.${index}.${fieldName}`;
+          const value = address[fieldName];
+          const error = validateField(fieldKey, value);
+          if (error) addError(fieldKey, error);
+        });
+      });
     }
 
-    const firstAddr = Array.isArray(form.addresses) && form.addresses[0] ? form.addresses[0] : {};
-    if (!firstAddr.line1 || String(firstAddr.line1).trim() === '') {
-      newErrors['addresses.0.line1'] = 'Address line 1 is required';
-      isValid = false;
-    }
-    if (!firstAddr.city || String(firstAddr.city).trim() === '') {
-      newErrors['addresses.0.city'] = 'City is required';
-      isValid = false;
-    }
-    if (!firstAddr.country || String(firstAddr.country).trim() === '') {
-      newErrors['addresses.0.country'] = 'Country is required';
-      isValid = false;
+    // Validate notes
+    const notesError = validateField('notes', form.notes);
+    if (notesError) addError('notes', notesError);
+
+    // Check for email duplicates
+    if (emailExists) {
+      addError('primaryContact.email', 'This email address is already registered with another supplier');
     }
 
     setErrors(newErrors);
@@ -412,6 +620,24 @@ export default function SupplierFormPage() {
             onDismiss={() => setErrors(prev => ({ ...prev, submit: null }))} 
           />
 
+          {/* Validation Summary */}
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 text-red-400 mb-2">
+                <span>⚠️</span>
+                <span className="font-medium">Please fix the following errors:</span>
+              </div>
+              <ul className="text-sm text-red-300 space-y-1">
+                {Object.entries(errors).map(([field, error]) => (
+                  <li key={field} className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>{error}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <form onSubmit={submit} className="space-y-8">
             {/* Basic Company Information */}
             <FormSection title="Basic Company Information" icon="🏢">
@@ -456,12 +682,14 @@ export default function SupplierFormPage() {
                 <FormField
                   label="Website"
                   name="website"
+                  type="url"
                   placeholder="e.g., https://www.colomboauto.lk"
                   value={form.website}
                   onChange={onChange}
                   onBlur={onBlur}
                   error={errors.website}
                   touched={touched.website}
+                  helpText="Enter the complete website URL including http:// or https://"
                 />
               </div>
             </FormSection>
@@ -510,6 +738,7 @@ export default function SupplierFormPage() {
                 <FormField
                   label="Phone"
                   name="primaryContact.phone"
+                  type="tel"
                   placeholder="e.g., +94 77 123 4567"
                   value={form.primaryContact?.phone}
                   onChange={onChange}
@@ -517,17 +746,20 @@ export default function SupplierFormPage() {
                   required
                   error={errors['primaryContact.phone']}
                   touched={touched['primaryContact.phone']}
+                  helpText="Include country code if applicable"
                 />
 
                 <FormField
                   label="Mobile (optional)"
                   name="primaryContact.mobile"
+                  type="tel"
                   placeholder="e.g., +94 71 234 5678"
                   value={form.primaryContact?.mobile}
                   onChange={onChange}
                   onBlur={onBlur}
                   error={errors['primaryContact.mobile']}
                   touched={touched['primaryContact.mobile']}
+                  helpText="Include country code if applicable"
                 />
               </div>
             </FormSection>
@@ -707,6 +939,8 @@ export default function SupplierFormPage() {
                   value={form.bankDetails?.bankName}
                   onChange={onChange}
                   onBlur={onBlur}
+                  error={errors['bankDetails.bankName']}
+                  touched={touched['bankDetails.bankName']}
                 />
 
                 <FormField
@@ -716,6 +950,8 @@ export default function SupplierFormPage() {
                   value={form.bankDetails?.branch}
                   onChange={onChange}
                   onBlur={onBlur}
+                  error={errors['bankDetails.branch']}
+                  touched={touched['bankDetails.branch']}
                 />
               </div>
 
@@ -727,15 +963,21 @@ export default function SupplierFormPage() {
                   value={form.bankDetails?.accountName}
                   onChange={onChange}
                   onBlur={onBlur}
+                  error={errors['bankDetails.accountName']}
+                  touched={touched['bankDetails.accountName']}
                 />
 
                 <FormField
                   label="Account Number"
                   name="bankDetails.accountNumber"
+                  type="text"
                   placeholder="e.g., 1234567890"
                   value={form.bankDetails?.accountNumber}
                   onChange={onChange}
                   onBlur={onBlur}
+                  error={errors['bankDetails.accountNumber']}
+                  touched={touched['bankDetails.accountNumber']}
+                  helpText="8-20 digits only"
                 />
               </div>
             </FormSection>

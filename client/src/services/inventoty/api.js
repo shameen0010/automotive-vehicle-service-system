@@ -39,6 +39,7 @@ export const downloadStockSummaryPDF = async (params = {}) => {
   return response;
 };
 
+export const apiClient = api;
 export default api;
  
 // Supplier spend downloads
@@ -54,6 +55,45 @@ export const downloadSupplierSpendPDF = async (params = {}) => {
   const response = await api.get('/api/inventory/reports/supplier-spend/download.pdf', {
     params,
     responseType: 'blob'
+  });
+  return response;
+};
+
+// Supplier performance analytics
+export const getSupplierPerformance = async (params = {}) => {
+  const { data } = await api.get('/api/inventory/reports/supplier-performance', { params });
+  return data;
+};
+
+export const downloadSupplierPerformancePDF = async (params = {}) => {
+  const response = await api.get('/api/inventory/reports/supplier-performance/download.pdf', {
+    params,
+    responseType: 'blob'
+  });
+  return response;
+};
+
+// Part price trend
+export const getPartPriceTrend = async (params = {}) => {
+  const { data } = await api.get('/api/inventory/reports/part-price-trend', { params });
+  return data;
+};
+
+// Part Usage Log API
+export const createPartUsageLog = async (payload) => {
+  const { data } = await api.post('/api/inventory/parts-usage-log', payload);
+  return data;
+};
+
+export const getPartUsageLogs = async (params = {}) => {
+  const { data } = await api.get('/api/inventory/parts-usage-log', { params });
+  return data;
+};
+
+export const downloadPartUsageLogCSV = async (params = {}) => {
+  const response = await api.get('/api/inventory/parts-usage-log/download.csv', {
+    params,
+    responseType: 'blob',
   });
   return response;
 };

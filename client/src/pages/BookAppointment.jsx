@@ -20,6 +20,12 @@ function todayStr() {
   const d = new Date();
   return d.toISOString().slice(0, 10);
 }
+// Tomorrow's date
+function tomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 //fixed date two weeks from today
 function twoWeeksFromTodayStr() {
   const d = new Date();
@@ -361,7 +367,7 @@ End of Report
           </select>
         </label>
         <label className="label">Date
-          <input type="date" className="input mt-1" value={form.date} onChange={e=>setForm({...form,date:e.target.value, timeSlot:''})} required min={todayStr()} max={twoWeeksFromTodayStr()} />
+          <input type="date" className="input mt-1" value={form.date} onChange={e=>setForm({...form,date:e.target.value, timeSlot:''})} required min={tomorrowStr()} max={twoWeeksFromTodayStr()} />
         </label>
         <label className="label">Time Slot
           <select className="input mt-1" value={form.timeSlot} onChange={e=>setForm({...form,timeSlot:e.target.value})} required disabled={!form.date}>

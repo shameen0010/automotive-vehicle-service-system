@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import ReportHeader from '../../components/inventory/ReportHeader';
 import FilterPanel from '../../components/inventory/FilterPanel';
 import EnhancedDataTable from '../../components/inventory/EnhancedDataTable';
 import ExportActions from '../../components/inventory/ExportActions';
@@ -11,8 +10,6 @@ export default function SupplierSpendReport() {
   const [rows, setRows] = useState([]);
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [supplierId, setSupplierId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
   // Calculate summary stats
   const stats = useMemo(() => {
@@ -35,7 +32,6 @@ export default function SupplierSpendReport() {
       const items = resp.data.suppliers || resp.data.items || resp.data || [];
       setSupplierOptions(items.map(s => ({ value: s._id, label: s.companyName || s.displayName || s.name })));
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to load suppliers', e);
     }
   }, []);
@@ -45,8 +41,6 @@ export default function SupplierSpendReport() {
       setLoading(true);
       const params = {};
       if (supplierId) params.supplierId = supplierId;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
       const data = await getSupplierSpendReport(params);
       setRows(data.rows || []);
     } catch (e) {
@@ -55,12 +49,12 @@ export default function SupplierSpendReport() {
     } finally {
       setLoading(false);
     }
-  }, [supplierId, startDate, endDate]);
+  }, [supplierId]);
 
   useEffect(() => {
     fetchSuppliers();
     fetchReport();
-  }, [fetchSuppliers]);
+  }, [fetchSuppliers, fetchReport]);
 
   const columns = useMemo(() => [
     { 
@@ -121,11 +115,7 @@ export default function SupplierSpendReport() {
       label: 'First Order',
       sortable: true,
       render: (row) => row.firstOrderDate 
-        ? new Date(row.firstOrderDate).toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          })
+        ? new Date(row.firstOrderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
         : '-'
     },
     { 
@@ -133,11 +123,7 @@ export default function SupplierSpendReport() {
       label: 'Last Order',
       sortable: true,
       render: (row) => row.lastOrderDate 
-        ? new Date(row.lastOrderDate).toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          })
+        ? new Date(row.lastOrderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
         : '-'
     },
   ], []);
@@ -147,16 +133,12 @@ export default function SupplierSpendReport() {
       setExportLoading(true);
       const params = {};
       if (supplierId) params.supplierId = supplierId;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      
+
       const resp = type === 'csv' 
         ? await downloadSupplierSpendCSV(params) 
         : await downloadSupplierSpendPDF(params);
-      
-      const blob = new Blob([resp.data], { 
-        type: type === 'csv' ? 'text/csv' : 'application/pdf' 
-      });
+
+      const blob = new Blob([resp.data], { type: type === 'csv' ? 'text/csv' : 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -186,19 +168,12 @@ export default function SupplierSpendReport() {
     if (key === 'supplierId') setSupplierId(value);
   };
 
-  const handleDateRangeChange = (dateRange) => {
-    setStartDate(dateRange.startDate);
-    setEndDate(dateRange.endDate);
-  };
-
   const handleClearFilters = () => {
     setSupplierId('');
-    setStartDate('');
-    setEndDate('');
   };
 
   const ChartIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   );
@@ -206,35 +181,51 @@ export default function SupplierSpendReport() {
   return (
     <div className="min-h-screen w-full bg-app">
       <div className="app-container space-y-6">
-        {/* Header */}
-        <ReportHeader
-          title="Supplier Spend Analysis"
-          description="Comprehensive spending analysis by supplier with detailed order metrics"
-          stats={stats}
-          icon={ChartIcon}
-          actions={[
-            {
-              label: 'Refresh Data',
-              onClick: fetchReport,
-              variant: 'secondary',
-              icon: () => (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              )
-            }
-          ]}
-        />
+
+        {/* Header - Fully Responsive */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          {/* Left: Icon + Title */}
+          <div className="flex items-center gap-4">
+            <ChartIcon />
+            <div>
+              <h1 className="text-2xl font-bold text-slate-200">Supplier Spend Analysis</h1>
+              <p className="text-sm text-slate-400">Comprehensive spending analysis by supplier with detailed order metrics</p>
+            </div>
+          </div>
+
+          {/* Middle: Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {stats.map((s, idx) => (
+              <div key={idx} className="bg-slate-800/60 p-4 rounded-lg text-center">
+                <p className="text-xs text-slate-400">{s.label}</p>
+                <p className="text-lg font-semibold text-slate-100">{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Right: Actions */}
+          <div className="mt-4 md:mt-0 flex gap-2">
+            <button 
+              onClick={fetchReport} 
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh Data
+            </button>
+          </div>
+        </div>
 
         {/* Filters */}
-        <FilterPanel
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          dateRange={{ startDate, endDate }}
-          onDateRangeChange={handleDateRangeChange}
-          onApplyFilters={fetchReport}
-          onClearFilters={handleClearFilters}
-        />
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 rounded-lg shadow-xl border border-slate-700">
+          <FilterPanel
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onApplyFilters={fetchReport}
+            onClearFilters={handleClearFilters}
+          />
+        </div>
 
         {/* Export Actions */}
         <div className="flex justify-end">
@@ -249,11 +240,10 @@ export default function SupplierSpendReport() {
           columns={columns}
           data={rows}
           loading={loading}
-          emptyMessage="No supplier spend data found for the selected filters. Try adjusting your date range or supplier selection."
+          emptyMessage="No supplier spend data found for the selected supplier. Try selecting a different supplier."
           showExport={false}
         />
       </div>
     </div>
   );
 }
-

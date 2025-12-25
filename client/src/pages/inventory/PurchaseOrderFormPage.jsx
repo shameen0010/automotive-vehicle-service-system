@@ -17,6 +17,8 @@ const PurchaseOrderFormPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState("");
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   const isInventoryManager = user?.role === 'inventory_manager' || user?.role === 'manager' || user?.role === 'admin';
   
@@ -40,13 +42,116 @@ const PurchaseOrderFormPage = () => {
   const [suppliersError, setSuppliersError] = useState(null);
   const [partsError, setPartsError] = useState(null);
 
+  // Validation rules
+  const validationRules = {
+    // Basic Information
+    supplier: { 
+      required: true, 
+      message: "Supplier is required" 
+    },
+    expectedDeliveryDate: { 
+      required: true, 
+      minDate: new Date().toISOString().split('T')[0],
+      message: "Expected delivery date is required and must be in the future" 
+    },
+    
+    // Payment Terms
+    paymentTerms: { 
+      required: true, 
+      message: "Payment terms is required" 
+    },
+    paymentMethod: { 
+      required: true, 
+      message: "Payment method is required" 
+    },
+    paymentDueDate: { 
+      minDate: new Date().toISOString().split('T')[0],
+      message: "Payment due date must be in the future" 
+    },
+    
+    // Delivery Address
+    "deliveryAddress.street": { 
+      required: true, 
+      minLength: 5, 
+      maxLength: 200, 
+      message: "Street address is required (5-200 characters)" 
+    },
+    "deliveryAddress.city": { 
+      required: true, 
+      minLength: 2, 
+      maxLength: 100, 
+      pattern: /^[a-zA-Z\s\-'.]+$/, 
+      message: "City is required (2-100 characters, letters only)" 
+    },
+    "deliveryAddress.state": { 
+      maxLength: 100, 
+      pattern: /^[a-zA-Z\s\-'.]+$/, 
+      message: "State must contain only letters, spaces, hyphens, apostrophes, or dots" 
+    },
+    "deliveryAddress.zipCode": { 
+      pattern: /^[A-Z0-9\s\-]{3,20}$/, 
+      message: "ZIP code must be 3-20 characters, letters, numbers, spaces, or hyphens" 
+    },
+    "deliveryAddress.country": { 
+      required: true, 
+      minLength: 2, 
+      maxLength: 100, 
+      pattern: /^[a-zA-Z\s\-'.]+$/, 
+      message: "Country is required (2-100 characters, letters only)" 
+    },
+    
+    // Additional Information
+    shippingInstructions: { 
+      maxLength: 1000, 
+      message: "Shipping instructions must be less than 1000 characters" 
+    },
+    notes: { 
+      maxLength: 1000, 
+      message: "Notes must be less than 1000 characters" 
+    },
+    
+    // Order Items
+    "items": {
+      required: true,
+      minItems: 1,
+      message: "At least one item is required"
+    },
+    "newItem.part": {
+      required: true,
+      message: "Part selection is required"
+    },
+    "newItem.quantity": {
+      required: true,
+      min: 1,
+      max: 10000,
+      message: "Quantity must be between 1 and 10,000"
+    },
+    "newItem.unitPrice": {
+      required: true,
+      min: 0,
+      max: 999999.99,
+      message: "Unit price must be between $0 and $999,999.99"
+    }
+  };
+
   const fetchSuppliers = useCallback(async () => {
     try {
       setLoadingSuppliers(true);
       setSuppliersError(null);
+      console.log('🔍 Frontend: Fetching suppliers from /api/suppliers/public...');
       const response = await api.get('/api/suppliers/public');
-      setSuppliers(response.data.suppliers || response.data.items || []);
+      console.log('🔍 Frontend: Suppliers response:', response.data);
+      
+      const suppliersData = response.data.suppliers || response.data.items || [];
+      console.log('🔍 Frontend: Processed suppliers:', suppliersData);
+      setSuppliers(suppliersData);
+      
+      if (suppliersData.length === 0) {
+        console.warn('⚠️ Frontend: No suppliers found in response');
+        setSuppliersError('No suppliers found. Please add suppliers first.');
+      }
     } catch (err) {
+      console.error('❌ Frontend: Error fetching suppliers:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch suppliers';
       setSuppliersError(errorMessage);
       setError(`Suppliers error: ${errorMessage}`);
@@ -69,6 +174,170 @@ const PurchaseOrderFormPage = () => {
       setLoadingParts(false);
     }
   }, []);
+
+  // Validation functions
+  const validateField = (name, value) => {
+    const rules = validationRules[name];
+    if (!rules) return "";
+
+    const trimmedValue = value ? value.toString().trim() : "";
+    const fieldDisplayName = name.split('.').pop().replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
+    // Required field validation
+    if (rules.required && (!value || trimmedValue === "")) {
+      return rules.message || `${fieldDisplayName} is required`;
+    }
+
+    // Skip other validations if field is empty and not required
+    if (!value || trimmedValue === "") return "";
+
+    // Min length validation
+    if (rules.minLength && trimmedValue.length < rules.minLength) {
+      return rules.message || `${fieldDisplayName} must be at least ${rules.minLength} characters`;
+    }
+
+    // Max length validation
+    if (rules.maxLength && trimmedValue.length > rules.maxLength) {
+      return rules.message || `${fieldDisplayName} must be less than ${rules.maxLength} characters`;
+    }
+
+    // Min value validation (for numbers)
+    if (rules.min !== undefined && Number(trimmedValue) < rules.min) {
+      return rules.message || `${fieldDisplayName} must be at least ${rules.min}`;
+    }
+
+    // Max value validation (for numbers)
+    if (rules.max !== undefined && Number(trimmedValue) > rules.max) {
+      return rules.message || `${fieldDisplayName} must be at most ${rules.max}`;
+    }
+
+    // Date validation
+    if (rules.minDate && trimmedValue < rules.minDate) {
+      return rules.message || `${fieldDisplayName} must be in the future`;
+    }
+
+    // Pattern validation
+    if (rules.pattern && !rules.pattern.test(trimmedValue)) {
+      return rules.message || `${fieldDisplayName} format is invalid`;
+    }
+
+    return "";
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Helper function to add error
+    const addError = (fieldName, error) => {
+      newErrors[fieldName] = error;
+      isValid = false;
+    };
+
+    // Validate basic information
+    const basicFields = ['supplier', 'expectedDeliveryDate'];
+    basicFields.forEach(fieldName => {
+      const value = formData[fieldName];
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
+    });
+
+    // Validate payment terms
+    const paymentFields = ['paymentTerms', 'paymentMethod', 'paymentDueDate'];
+    paymentFields.forEach(fieldName => {
+      const value = formData[fieldName];
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
+    });
+
+    // Validate delivery address
+    const addressFields = [
+      'deliveryAddress.street',
+      'deliveryAddress.city', 
+      'deliveryAddress.state',
+      'deliveryAddress.zipCode',
+      'deliveryAddress.country'
+    ];
+    addressFields.forEach(fieldName => {
+      const value = fieldName === 'deliveryAddress.street' ? formData.deliveryAddress.street :
+                   fieldName === 'deliveryAddress.city' ? formData.deliveryAddress.city :
+                   fieldName === 'deliveryAddress.state' ? formData.deliveryAddress.state :
+                   fieldName === 'deliveryAddress.zipCode' ? formData.deliveryAddress.zipCode :
+                   formData.deliveryAddress.country;
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
+    });
+
+    // Validate additional information
+    const additionalFields = ['shippingInstructions', 'notes'];
+    additionalFields.forEach(fieldName => {
+      const value = formData[fieldName];
+      const error = validateField(fieldName, value);
+      if (error) addError(fieldName, error);
+    });
+
+    // Validate items
+    if (!formData.items || formData.items.length === 0) {
+      addError('items', 'At least one item is required');
+    } else {
+      // Check for duplicate parts
+      const partIds = formData.items.map(item => item.part);
+      const uniquePartIds = [...new Set(partIds)];
+      if (partIds.length !== uniquePartIds.length) {
+        addError('items', 'Duplicate parts are not allowed');
+      }
+
+      // Validate each item
+      formData.items.forEach((item, index) => {
+        if (!item.part) {
+          addError(`items.${index}.part`, 'Part selection is required');
+        }
+        if (!item.quantity || item.quantity < 1) {
+          addError(`items.${index}.quantity`, 'Quantity must be at least 1');
+        }
+        if (item.unitPrice < 0) {
+          addError(`items.${index}.unitPrice`, 'Unit price cannot be negative');
+        }
+      });
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleFieldChange = (fieldName, value) => {
+    // Clear previous errors for this field
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+
+    // Update form data
+    if (fieldName.includes('.')) {
+      const [parent, child] = fieldName.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: { ...prev[parent], [child]: value }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [fieldName]: value }));
+    }
+
+    // Validate the field
+    const error = validateField(fieldName, value);
+    if (error) {
+      setErrors(prev => ({ ...prev, [fieldName]: error }));
+    }
+  };
+
+  const handleFieldBlur = (fieldName, value) => {
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+    const error = validateField(fieldName, value);
+    if (error) {
+      setErrors(prev => ({ ...prev, [fieldName]: error }));
+    }
+  };
 
   const fetchPurchaseOrder = useCallback(async () => {
     try {
@@ -109,15 +378,55 @@ const PurchaseOrderFormPage = () => {
   }, [fetchSuppliers, fetchParts, fetchPurchaseOrder]);
 
   const addItem = () => {
-    if (!newItem.part) return;
+    // Validate new item before adding
+    const itemErrors = {};
+    let isValid = true;
+
+    if (!newItem.part) {
+      itemErrors.part = "Part selection is required";
+      isValid = false;
+    }
+
+    const quantity = Number(newItem.quantity) || 0;
+    if (quantity < 1) {
+      itemErrors.quantity = "Quantity must be at least 1";
+      isValid = false;
+    }
+
+    const unitPrice = Number(newItem.unitPrice) || 0;
+    if (unitPrice < 0) {
+      itemErrors.unitPrice = "Unit price cannot be negative";
+      isValid = false;
+    }
+
+    // Check for duplicate parts
+    if (formData.items.some(item => item.part === newItem.part)) {
+      itemErrors.part = "This part is already in the order";
+      isValid = false;
+    }
+
+    if (!isValid) {
+      setErrors(prev => ({ ...prev, ...itemErrors }));
+      return;
+    }
+
     const item = {
       part: newItem.part,
-      quantity: Number(newItem.quantity) || 1,
-      unitPrice: Number(newItem.unitPrice) || 0,
-      totalPrice: (Number(newItem.quantity) || 1) * (Number(newItem.unitPrice) || 0)
+      quantity: quantity,
+      unitPrice: unitPrice,
+      totalPrice: quantity * unitPrice
     };
     setFormData(prev => ({ ...prev, items: [...prev.items, item] }));
     setNewItem({ part: '', quantity: 1, unitPrice: 0 });
+    
+    // Clear any previous item errors
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.part;
+      delete newErrors.quantity;
+      delete newErrors.unitPrice;
+      return newErrors;
+    });
   };
 
   const removeItem = (index) => {
@@ -143,6 +452,12 @@ const PurchaseOrderFormPage = () => {
   };
 
   const save = async () => {
+    // Validate form before saving
+    if (!validateForm()) {
+      setError("Please fix the validation errors before saving");
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
@@ -230,6 +545,24 @@ const PurchaseOrderFormPage = () => {
             onDismiss={() => setError(null)} 
           />
 
+          {/* Validation Summary */}
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 text-red-400 mb-2">
+                <span>⚠️</span>
+                <span className="font-medium">Please fix the following errors:</span>
+              </div>
+              <ul className="text-sm text-red-300 space-y-1">
+                {Object.entries(errors).map(([field, error]) => (
+                  <li key={field} className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>{error}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <form onSubmit={(e) => { e.preventDefault(); save(); }} className="space-y-8">
             {/* Supplier & Delivery */}
             <FormSection title="Supplier & Delivery Information" icon="🚚">
@@ -238,21 +571,45 @@ const PurchaseOrderFormPage = () => {
                   label="Supplier"
                   name="supplier"
                   required
-                  error={suppliersError}
+                  error={errors.supplier || suppliersError}
+                  touched={touched.supplier}
                 >
                   <select
                     value={formData.supplier}
-                    onChange={(e) => setFormData(prev => ({ ...prev, supplier: e.target.value }))}
+                    onChange={(e) => handleFieldChange('supplier', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('supplier', e.target.value)}
                     required
                     className="select"
+                    disabled={loadingSuppliers}
                   >
-                    <option value="">Select a supplier</option>
-                    {suppliers.map(supplier => (
-                      <option key={supplier._id} value={supplier._id}>
-                        {supplier.name} - {supplier.email}
-                      </option>
-                    ))}
+                    <option value="">
+                      {loadingSuppliers ? 'Loading suppliers...' : 'Select a supplier'}
+                    </option>
+                    {suppliers.length > 0 ? (
+                      suppliers.map(supplier => (
+                        <option key={supplier._id} value={supplier._id}>
+                          {supplier.companyName} - {supplier.primaryContact?.email}
+                        </option>
+                      ))
+                    ) : (
+                      !loadingSuppliers && (
+                        <option disabled>
+                          {suppliersError ? 'Error loading suppliers' : 'No suppliers available'}
+                        </option>
+                      )
+                    )}
                   </select>
+                  {loadingSuppliers && (
+                    <div className="text-xs text-slate-400 mt-1">Loading suppliers...</div>
+                  )}
+                  {suppliersError && (
+                    <div className="text-xs text-red-400 mt-1">{suppliersError}</div>
+                  )}
+                  {!loadingSuppliers && suppliers.length === 0 && !suppliersError && (
+                    <div className="text-xs text-yellow-400 mt-1">
+                      No suppliers found. Please add suppliers first.
+                    </div>
+                  )}
                 </FormField>
 
                 <FormField
@@ -260,9 +617,13 @@ const PurchaseOrderFormPage = () => {
                   name="expectedDeliveryDate"
                   type="date"
                   value={formData.expectedDeliveryDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, expectedDeliveryDate: e.target.value }))}
+                  onChange={(e) => handleFieldChange('expectedDeliveryDate', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('expectedDeliveryDate', e.target.value)}
                   required
+                  error={errors.expectedDeliveryDate}
+                  touched={touched.expectedDeliveryDate}
                   min={new Date().toISOString().split('T')[0]}
+                  helpText="Select a future date for expected delivery"
                 />
               </div>
             </FormSection>
@@ -274,11 +635,15 @@ const PurchaseOrderFormPage = () => {
                   label="Payment Terms"
                   name="paymentTerms"
                   value={formData.paymentTerms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
+                  onChange={(e) => handleFieldChange('paymentTerms', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('paymentTerms', e.target.value)}
+                  error={errors.paymentTerms}
+                  touched={touched.paymentTerms}
                 >
                   <select
                     value={formData.paymentTerms}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
+                    onChange={(e) => handleFieldChange('paymentTerms', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('paymentTerms', e.target.value)}
                     className="select"
                   >
                     <option value="Net 30">Net 30</option>
@@ -292,11 +657,15 @@ const PurchaseOrderFormPage = () => {
                   label="Payment Method"
                   name="paymentMethod"
                   value={formData.paymentMethod}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('paymentMethod', e.target.value)}
+                  error={errors.paymentMethod}
+                  touched={touched.paymentMethod}
                 >
                   <select
                     value={formData.paymentMethod}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                    onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('paymentMethod', e.target.value)}
                     className="select"
                   >
                     <option value="credit">Credit</option>
@@ -311,7 +680,12 @@ const PurchaseOrderFormPage = () => {
                   name="paymentDueDate"
                   type="date"
                   value={formData.paymentDueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paymentDueDate: e.target.value }))}
+                  onChange={(e) => handleFieldChange('paymentDueDate', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('paymentDueDate', e.target.value)}
+                  error={errors.paymentDueDate}
+                  touched={touched.paymentDueDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  helpText="Optional: Select payment due date"
                 />
               </div>
             </FormSection>
@@ -324,10 +698,12 @@ const PurchaseOrderFormPage = () => {
                   name="deliveryAddress.street"
                   placeholder="Street Address"
                   value={formData.deliveryAddress.street}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    deliveryAddress: { ...prev.deliveryAddress, street: e.target.value }
-                  }))}
+                  onChange={(e) => handleFieldChange('deliveryAddress.street', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('deliveryAddress.street', e.target.value)}
+                  required
+                  error={errors['deliveryAddress.street']}
+                  touched={touched['deliveryAddress.street']}
+                  helpText="Enter the complete street address"
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -336,10 +712,11 @@ const PurchaseOrderFormPage = () => {
                     name="deliveryAddress.city"
                     placeholder="City"
                     value={formData.deliveryAddress.city}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      deliveryAddress: { ...prev.deliveryAddress, city: e.target.value }
-                    }))}
+                    onChange={(e) => handleFieldChange('deliveryAddress.city', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('deliveryAddress.city', e.target.value)}
+                    required
+                    error={errors['deliveryAddress.city']}
+                    touched={touched['deliveryAddress.city']}
                   />
 
                   <FormField
@@ -347,10 +724,10 @@ const PurchaseOrderFormPage = () => {
                     name="deliveryAddress.state"
                     placeholder="State"
                     value={formData.deliveryAddress.state}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      deliveryAddress: { ...prev.deliveryAddress, state: e.target.value }
-                    }))}
+                    onChange={(e) => handleFieldChange('deliveryAddress.state', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('deliveryAddress.state', e.target.value)}
+                    error={errors['deliveryAddress.state']}
+                    touched={touched['deliveryAddress.state']}
                   />
 
                   <FormField
@@ -358,12 +735,24 @@ const PurchaseOrderFormPage = () => {
                     name="deliveryAddress.zipCode"
                     placeholder="ZIP Code"
                     value={formData.deliveryAddress.zipCode}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      deliveryAddress: { ...prev.deliveryAddress, zipCode: e.target.value }
-                    }))}
+                    onChange={(e) => handleFieldChange('deliveryAddress.zipCode', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('deliveryAddress.zipCode', e.target.value)}
+                    error={errors['deliveryAddress.zipCode']}
+                    touched={touched['deliveryAddress.zipCode']}
                   />
                 </div>
+
+                <FormField
+                  label="Country"
+                  name="deliveryAddress.country"
+                  placeholder="Country"
+                  value={formData.deliveryAddress.country}
+                  onChange={(e) => handleFieldChange('deliveryAddress.country', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('deliveryAddress.country', e.target.value)}
+                  required
+                  error={errors['deliveryAddress.country']}
+                  touched={touched['deliveryAddress.country']}
+                />
               </div>
             </FormSection>
 
@@ -377,11 +766,25 @@ const PurchaseOrderFormPage = () => {
                     <FormField
                       label="Part"
                       name="newItem.part"
-                      error={partsError}
+                      error={errors.part || partsError}
+                      touched={touched.part}
                     >
                       <select
                         value={newItem.part}
                         onChange={(e) => setNewItem(prev => ({ ...prev, part: e.target.value }))}
+                        onBlur={(e) => {
+                          setTouched(prev => ({ ...prev, part: true }));
+                          const error = validateField('newItem.part', e.target.value);
+                          if (error) {
+                            setErrors(prev => ({ ...prev, part: error }));
+                          } else {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.part;
+                              return newErrors;
+                            });
+                          }
+                        }}
                         className="select"
                       >
                         <option value="">Select a part</option>
@@ -400,6 +803,21 @@ const PurchaseOrderFormPage = () => {
                       min="1"
                       value={newItem.quantity}
                       onChange={(e) => setNewItem(prev => ({ ...prev, quantity: e.target.value }))}
+                      onBlur={(e) => {
+                        setTouched(prev => ({ ...prev, quantity: true }));
+                        const error = validateField('newItem.quantity', e.target.value);
+                        if (error) {
+                          setErrors(prev => ({ ...prev, quantity: error }));
+                        } else {
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.quantity;
+                            return newErrors;
+                          });
+                        }
+                      }}
+                      error={errors.quantity}
+                      touched={touched.quantity}
                     />
 
                     <FormField
@@ -410,6 +828,21 @@ const PurchaseOrderFormPage = () => {
                       step="0.01"
                       value={newItem.unitPrice}
                       onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: e.target.value }))}
+                      onBlur={(e) => {
+                        setTouched(prev => ({ ...prev, unitPrice: true }));
+                        const error = validateField('newItem.unitPrice', e.target.value);
+                        if (error) {
+                          setErrors(prev => ({ ...prev, unitPrice: error }));
+                        } else {
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.unitPrice;
+                            return newErrors;
+                          });
+                        }
+                      }}
+                      error={errors.unitPrice}
+                      touched={touched.unitPrice}
                     />
 
                     <button
@@ -501,12 +934,16 @@ const PurchaseOrderFormPage = () => {
                   label="Shipping Instructions"
                   name="shippingInstructions"
                   value={formData.shippingInstructions}
-                  onChange={(e) => setFormData(prev => ({ ...prev, shippingInstructions: e.target.value }))}
+                  onChange={(e) => handleFieldChange('shippingInstructions', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('shippingInstructions', e.target.value)}
+                  error={errors.shippingInstructions}
+                  touched={touched.shippingInstructions}
                   helpText="Special handling instructions, delivery preferences, etc."
                 >
                   <textarea
                     value={formData.shippingInstructions}
-                    onChange={(e) => setFormData(prev => ({ ...prev, shippingInstructions: e.target.value }))}
+                    onChange={(e) => handleFieldChange('shippingInstructions', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('shippingInstructions', e.target.value)}
                     placeholder="Special handling instructions, delivery preferences, etc."
                     rows={3}
                     className="textarea"
@@ -517,12 +954,16 @@ const PurchaseOrderFormPage = () => {
                   label="Notes"
                   name="notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) => handleFieldChange('notes', e.target.value)}
+                  onBlur={(e) => handleFieldBlur('notes', e.target.value)}
+                  error={errors.notes}
+                  touched={touched.notes}
                   helpText="Additional notes or comments about this purchase order"
                 >
                   <textarea
                     value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) => handleFieldChange('notes', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('notes', e.target.value)}
                     placeholder="Additional notes or comments about this purchase order"
                     rows={3}
                     className="textarea"

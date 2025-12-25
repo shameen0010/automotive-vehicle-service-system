@@ -34,10 +34,12 @@ export async function getStockSummary(req, res) {
       { $group: { _id: '$part', unitPrice: { $first: '$unitPrice' } } }
     ]);
 
+    console.log('Latest prices found:', latestPrices.length, 'parts with pricing data');
+
     const partIdToPrice = new Map(latestPrices.map(p => [String(p._id), p.unitPrice || 0]));
 
     const parts = await Part.find({ isActive: true, ...partMatch })
-      .select('name partCode category stock.onHand stock.reserved stock.minLevel stock.maxLevel stock.reorderLevel');
+      .select('name partCode category stock.onHand stock.reserved stock.minLevel stock.maxLevel stock.reorderLevel cost.lastPurchasePrice sellingPrice');
 
     let totalOnHand = 0;
     let totalAvailable = 0;
@@ -50,7 +52,18 @@ export async function getStockSummary(req, res) {
       const minLevel = p?.stock?.minLevel || 0;
       const maxLevel = p?.stock?.maxLevel || 0;
       const reorderLevel = p?.stock?.reorderLevel || 0;
-      const price = partIdToPrice.get(String(p._id)) || 0;
+      let price = partIdToPrice.get(String(p._id)) || 0;
+      
+      // Fallback to part's own pricing if no PO pricing available
+      if (price === 0) {
+        price = p.cost?.lastPurchasePrice || p.sellingPrice || 0;
+        if (price > 0) {
+          console.log(`Part ${p.partCode || p.name} using fallback price: $${price}`);
+        } else {
+          console.log(`Part ${p.partCode || p.name} (${p._id}) has no pricing data at all`);
+        }
+      }
+      
       const value = onHand * price;
 
       let status = 'OK';
@@ -107,10 +120,12 @@ async function fetchStockSummaryData(query) {
     { $group: { _id: '$part', unitPrice: { $first: '$unitPrice' } } }
   ]);
 
+  console.log('Latest prices found (internal):', latestPrices.length, 'parts with pricing data');
+
   const partIdToPrice = new Map(latestPrices.map(p => [String(p._id), p.unitPrice || 0]));
 
   const parts = await Part.find({ isActive: true, ...partMatch })
-    .select('name partCode category stock.onHand stock.reserved stock.minLevel stock.maxLevel stock.reorderLevel');
+    .select('name partCode category stock.onHand stock.reserved stock.minLevel stock.maxLevel stock.reorderLevel cost.lastPurchasePrice sellingPrice');
 
   let totalOnHand = 0;
   let totalAvailable = 0;
@@ -123,7 +138,18 @@ async function fetchStockSummaryData(query) {
     const minLevel = p?.stock?.minLevel || 0;
     const maxLevel = p?.stock?.maxLevel || 0;
     const reorderLevel = p?.stock?.reorderLevel || 0;
-    const price = partIdToPrice.get(String(p._id)) || 0;
+    let price = partIdToPrice.get(String(p._id)) || 0;
+    
+    // Fallback to part's own pricing if no PO pricing available
+    if (price === 0) {
+      price = p.cost?.lastPurchasePrice || p.sellingPrice || 0;
+      if (price > 0) {
+        console.log(`Part ${p.partCode || p.name} using fallback price: $${price} (internal)`);
+      } else {
+        console.log(`Part ${p.partCode || p.name} (${p._id}) has no pricing data at all (internal)`);
+      }
+    }
+    
     const value = onHand * price;
 
     let status = 'OK';
@@ -342,6 +368,247 @@ export async function downloadSupplierSpendPDF(req, res) {
   } catch (error) {
     console.error('downloadSupplierSpendPDF error:', error);
     res.status(500).json({ message: 'Failed to download supplier spend PDF' });
+  }
+}
+
+// GET /api/inventory/reports/supplier-performance
+// Evaluate suppliers based on delivery history and timeliness
+export async function getSupplierPerformance(req, res) {
+  try {
+    const { poMatch } = buildFilters(req.query);
+    const lateThresholdDays = parseInt(req.query.lateDays || '2', 10);
+
+    const pipeline = [
+      { $match: { ...poMatch, status: 'delivered' } },
+      {
+        $project: {
+          supplier: 1,
+          approvedAt: 1,
+          deliveredAt: 1,
+          expectedDeliveryDate: 1,
+          items: 1,
+          totalAmount: 1,
+          approvalToDeliveryDays: {
+            $divide: [ { $subtract: ['$deliveredAt', '$approvedAt'] }, 1000 * 60 * 60 * 24 ]
+          },
+          lateByDays: {
+            $cond: [
+              { $and: [ { $ifNull: ['$expectedDeliveryDate', false] }, { $ifNull: ['$deliveredAt', false] } ] },
+              { $divide: [ { $subtract: ['$deliveredAt', '$expectedDeliveryDate'] }, 1000 * 60 * 60 * 24 ] },
+              null
+            ]
+          }
+        }
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$supplier',
+          totalPOs: { $sum: 1 },
+          avgDeliveryDays: { $avg: '$approvalToDeliveryDays' },
+          deliveredLateCount: {
+            $sum: {
+              $cond: [
+                { $and: [ { $ne: ['$lateByDays', null] }, { $gt: ['$lateByDays', lateThresholdDays] } ] },
+                1,
+                0
+              ]
+            }
+          },
+          totalAmount: { $sum: '$totalAmount' }
+        }
+      },
+      {
+        $project: {
+          supplierId: '$_id',
+          _id: 0,
+          totalPOs: 1,
+          avgDeliveryDays: 1,
+          deliveredLatePct: {
+            $cond: [ { $gt: ['$totalPOs', 0] }, { $multiply: [ { $divide: ['$deliveredLateCount', '$totalPOs'] }, 100 ] }, 0 ]
+          },
+          totalAmount: 1
+        }
+      },
+      { $lookup: { from: 'suppliers', localField: 'supplierId', foreignField: '_id', as: 'supplier' } },
+      { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          supplierId: 1,
+          companyName: { $ifNull: ['$supplier.companyName', '$supplier.name'] },
+          totalPOs: 1,
+          avgDeliveryDays: 1,
+          deliveredLatePct: 1,
+          totalAmount: 1
+        }
+      },
+      { $sort: { deliveredLatePct: -1 } }
+    ];
+
+    const rows = await PurchaseOrder.aggregate(pipeline);
+    res.json({ lateThresholdDays, rows });
+  } catch (error) {
+    console.error('getSupplierPerformance error:', error);
+    res.status(500).json({ message: 'Failed to generate supplier performance report' });
+  }
+}
+
+// Internal: fetch supplier performance data
+async function fetchSupplierPerformanceData(query) {
+  const { poMatch } = buildFilters(query);
+  const lateThresholdDays = parseInt(query.lateDays || '2', 10);
+  const pipeline = [
+    { $match: { ...poMatch, status: 'delivered' } },
+    {
+      $project: {
+        supplier: 1,
+        approvedAt: 1,
+        deliveredAt: 1,
+        expectedDeliveryDate: 1,
+        items: 1,
+        totalAmount: 1,
+        approvalToDeliveryDays: {
+          $divide: [ { $subtract: ['$deliveredAt', '$approvedAt'] }, 1000 * 60 * 60 * 24 ]
+        },
+        lateByDays: {
+          $cond: [
+            { $and: [ { $ifNull: ['$expectedDeliveryDate', false] }, { $ifNull: ['$deliveredAt', false] } ] },
+            { $divide: [ { $subtract: ['$deliveredAt', '$expectedDeliveryDate'] }, 1000 * 60 * 60 * 24 ] },
+            null
+          ]
+        }
+      }
+    },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$supplier',
+        totalPOs: { $sum: 1 },
+        avgDeliveryDays: { $avg: '$approvalToDeliveryDays' },
+        deliveredLateCount: {
+          $sum: {
+            $cond: [ { $and: [ { $ne: ['$lateByDays', null] }, { $gt: ['$lateByDays', lateThresholdDays] } ] }, 1, 0 ]
+          }
+        },
+        totalAmount: { $sum: '$totalAmount' }
+      }
+    },
+    {
+      $project: {
+        supplierId: '$_id',
+        _id: 0,
+        totalPOs: 1,
+        avgDeliveryDays: 1,
+        deliveredLatePct: {
+          $cond: [ { $gt: ['$totalPOs', 0] }, { $multiply: [ { $divide: ['$deliveredLateCount', '$totalPOs'] }, 100 ] }, 0 ]
+        },
+        totalAmount: 1
+      }
+    },
+    { $lookup: { from: 'suppliers', localField: 'supplierId', foreignField: '_id', as: 'supplier' } },
+    { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        supplierId: 1,
+        companyName: { $ifNull: ['$supplier.companyName', '$supplier.name'] },
+        totalPOs: 1,
+        avgDeliveryDays: 1,
+        deliveredLatePct: 1,
+        totalAmount: 1
+      }
+    },
+    { $sort: { deliveredLatePct: -1 } }
+  ];
+  const rows = await PurchaseOrder.aggregate(pipeline);
+  return { lateThresholdDays, rows };
+}
+
+export async function downloadSupplierPerformancePDF(req, res) {
+  try {
+    const data = await fetchSupplierPerformanceData(req.query);
+    const { generateSupplierPerformancePDF } = await import('../../services/inventory/pdfService.js');
+    const pdfBuffer = await generateSupplierPerformancePDF(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="supplier-performance-${new Date().toISOString().split('T')[0]}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('downloadSupplierPerformancePDF error:', error);
+    res.status(500).json({ message: 'Failed to download supplier performance PDF' });
+  }
+}
+
+// GET /api/inventory/reports/part-price-trend
+// Returns avg unit price trend per part over time (monthly buckets)
+export async function getPartPriceTrend(req, res) {
+  try {
+    const { poMatch } = buildFilters(req.query);
+    const limitParts = parseInt(req.query.limit || '5', 10);
+    const months = parseInt(req.query.months || '6', 10);
+
+    const pipeline = [
+      { $match: poMatch },
+      { $unwind: '$items' },
+      {
+        $project: {
+          part: '$items.part',
+          unitPrice: '$items.unitPrice',
+          y: { $year: '$createdAt' },
+          m: { $month: '$createdAt' }
+        }
+      },
+      {
+        $group: {
+          _id: { part: '$part', y: '$y', m: '$m' },
+          avgPrice: { $avg: '$unitPrice' }
+        }
+      },
+      { $sort: { '_id.y': -1, '_id.m': -1 } }
+    ];
+
+    const rows = await PurchaseOrder.aggregate(pipeline);
+
+    // Build last N months labels
+    const now = new Date();
+    const labelSet = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labelSet.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+
+    // Map part -> label -> price
+    const partMap = new Map();
+    for (const r of rows) {
+      const key = `${r._id.y}-${String(r._id.m).padStart(2, '0')}`;
+      if (!partMap.has(String(r._id.part))) partMap.set(String(r._id.part), new Map());
+      partMap.get(String(r._id.part)).set(key, r.avgPrice);
+    }
+
+    // Pick top parts by recent activity (number of months with data)
+    const rankedParts = Array.from(partMap.entries())
+      .map(([partId, m]) => ({ partId, count: m.size }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limitParts)
+      .map(p => p.partId);
+
+    // Fetch part names
+    const parts = await Part.find({ _id: { $in: rankedParts } }).select('name partCode').lean();
+    const partIdToName = new Map(parts.map(p => [String(p._id), p.partCode || p.name || String(p._id)]));
+
+    // Build datasets
+    const datasets = rankedParts.map((partId, idx) => ({
+      label: partIdToName.get(partId) || partId,
+      data: labelSet.map(label => {
+        const map = partMap.get(partId);
+        const val = map ? map.get(label) : null;
+        return val != null ? Number(val.toFixed(2)) : null;
+      })
+    }));
+
+    res.json({ labels: labelSet, datasets });
+  } catch (error) {
+    console.error('getPartPriceTrend error:', error);
+    res.status(500).json({ message: 'Failed to fetch part price trend' });
   }
 }
 

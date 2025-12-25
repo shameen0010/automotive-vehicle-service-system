@@ -33,9 +33,9 @@ const createSupplierRules = [
   body('currency').notEmpty().withMessage('currency is required'),
   body('bankDetails').optional().isObject(),
 
-  // 5. Product & Operational Information
-  body('suppliedCategories').isArray({ min: 1 }).withMessage('suppliedCategories must include at least one category'),
-  body('leadTimeDays').isInt({ min: 0 }).withMessage('leadTimeDays must be >= 0'),
+  // 5. Product & Operational Information (suppliedCategories no longer required)
+  body('suppliedCategories').optional().isArray(),
+  body('leadTimeDays').optional().isInt({ min: 0 }).withMessage('leadTimeDays must be >= 0'),
 ];
 
 const updateSupplierRules = [
@@ -67,9 +67,22 @@ const updateSupplierRules = [
 // Public endpoint for PO form (no auth required)
 router.get("/public", async (req, res) => {
   try {
-    const suppliers = await Supplier.find({ isActive: true }).select('name email _id');
+    const suppliers = await Supplier.find({ isActive: true }).select('companyName primaryContact.email _id');
     console.log('🔍 Server: Found suppliers:', suppliers.length, suppliers);
-    res.json({ items: suppliers });
+    
+    // Map companyName to name for frontend compatibility
+    const formattedSuppliers = suppliers.map(supplier => ({
+      _id: supplier._id,
+      name: supplier.companyName, // Map companyName to name for frontend
+      companyName: supplier.companyName, // Keep original for backward compatibility
+      email: supplier.primaryContact?.email
+    }));
+    
+    // Return suppliers in the format expected by Purchase Order form
+    res.json({ 
+      suppliers: formattedSuppliers,
+      items: formattedSuppliers // For backward compatibility
+    });
   } catch (err) {
     console.error('Error fetching suppliers for PO form:', err);
     res.status(500).json({ message: 'Failed to fetch suppliers' });
@@ -109,17 +122,63 @@ router.post("/", auth, createSupplierRules, async (req, res) => {
 // List suppliers
 router.get("/", auth, async (req, res) => {
   try {
-    const { q, isActive, page = 1, limit = 10, sort = "-createdAt", showAll } = req.query;
+    const { 
+      q, 
+      search, 
+      isActive, 
+      page = 1, 
+      limit = 10, 
+      sort = "-createdAt", 
+      showAll,
+      status 
+    } = req.query;
 
     const filter = {};
+    
+    // Handle active/inactive filter
     if (showAll === 'true' || typeof isActive === 'undefined') {
       // Show both active and inactive suppliers
       // Don't set isActive filter
     } else {
       filter.isActive = isActive === "true";
     }
-    if (q) {
-      filter.$or = [{ name: new RegExp(q, "i") }, { email: new RegExp(q, "i") }];
+
+    // Handle search filter (support both 'q' and 'search' parameters)
+    const searchQuery = q || search;
+    if (searchQuery) {
+      filter.$or = [
+        { companyName: { $regex: searchQuery, $options: 'i' } },
+        { displayName: { $regex: searchQuery, $options: 'i' } },
+        { 'primaryContact.fullName': { $regex: searchQuery, $options: 'i' } },
+        { 'primaryContact.email': { $regex: searchQuery, $options: 'i' } },
+        { 'primaryContact.phone': { $regex: searchQuery, $options: 'i' } },
+        { 'primaryContact.mobile': { $regex: searchQuery, $options: 'i' } },
+        { 'primaryContact.position': { $regex: searchQuery, $options: 'i' } },
+        { businessRegistrationNo: { $regex: searchQuery, $options: 'i' } },
+        { website: { $regex: searchQuery, $options: 'i' } },
+        { paymentTerms: { $regex: searchQuery, $options: 'i' } },
+        { currency: { $regex: searchQuery, $options: 'i' } },
+        { notes: { $regex: searchQuery, $options: 'i' } },
+        { 'addresses.city': { $regex: searchQuery, $options: 'i' } },
+        { 'addresses.country': { $regex: searchQuery, $options: 'i' } },
+        { 'bankDetails.bankName': { $regex: searchQuery, $options: 'i' } },
+        { 'bankDetails.accountName': { $regex: searchQuery, $options: 'i' } }
+      ];
+    }
+
+    // Handle status filter
+    if (status) {
+      switch (status) {
+        case 'active':
+          filter.isActive = true;
+          break;
+        case 'inactive':
+          filter.isActive = false;
+          break;
+        default:
+          // No filter applied
+          break;
+      }
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -128,8 +187,15 @@ router.get("/", auth, async (req, res) => {
       Supplier.countDocuments(filter),
     ]);
 
+    // Map companyName to name for frontend compatibility
+    const formattedItems = items.map(supplier => ({
+      ...supplier.toObject(),
+      name: supplier.companyName // Add name field for frontend compatibility
+    }));
+
     res.json({
-      items,
+      suppliers: formattedItems, // Changed from 'items' to 'suppliers' to match frontend expectation
+      items: formattedItems, // Keep both for backward compatibility
       total,
       page: Number(page),
       pages: Math.ceil(total / Number(limit)),
